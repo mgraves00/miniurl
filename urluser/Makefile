@@ -6,6 +6,8 @@ CF_PKG	!= pkg-config --cflags kcgi sqlbox 2>/dev/null
 LDADD		+= ${LD_PKG} -lpthread -L/usr/lib -lm
 CFLAGS		+= ${CF_PKG} -I ${.CURDIR}/obj
 
+CLEANFILES+=	miniurl.c miniurl.h
+
 SRCS=	miniurl.c urluser.c
 PROG=	urluser
 NOMAN=1
