@@ -56,30 +56,37 @@ list_login(struct ort *o)
 }
 
 void
-add_login(struct ort *o, char *login)
+add_login(struct ort *o, char *login, char *arg_pass)
 {
 	char pass[512], pass2[512];	/* what should the max password size be? */
 
-	if (!readpassphrase("Password: ", pass, sizeof(pass), RPP_ECHO_OFF)) {
-		warn("unable to read password");
-		return;
-	}
-	if (!readpassphrase("Retype Password: ", pass2, sizeof(pass2), RPP_ECHO_OFF)) {
-		explicit_bzero(pass,sizeof(pass));
-		warn("unable to read password");
-		return;
-	}
-	if (strcmp(pass,pass2) != 0) {
-		explicit_bzero(pass,sizeof(pass));
+	if (arg_pass == NULL) {
+		if (!readpassphrase("Password: ", pass, sizeof(pass), RPP_ECHO_OFF)) {
+			warn("unable to read password");
+			return;
+		}
+		if (!readpassphrase("Retype Password: ", pass2, sizeof(pass2), RPP_ECHO_OFF)) {
+			explicit_bzero(pass,sizeof(pass));
+			warn("unable to read password");
+			return;
+		}
+		if (strcmp(pass,pass2) != 0) {
+			explicit_bzero(pass,sizeof(pass));
+			explicit_bzero(pass2,sizeof(pass2));
+			warnx("passwords do not match");
+			return;
+		}
 		explicit_bzero(pass2,sizeof(pass2));
-		warnx("passwords do not match");
-		return;
-	}
-	explicit_bzero(pass2,sizeof(pass2));
-	if ((db_auth_insert(o,login,pass)) < 0) {
-		warnx("db_auth_insert");
-		explicit_bzero(pass,sizeof(pass));
-		return;
+		if ((db_auth_insert(o,login,pass)) < 0) {
+			warnx("db_auth_insert");
+			explicit_bzero(pass,sizeof(pass));
+			return;
+		}
+	} else {
+		if ((db_auth_insert(o,login,arg_pass)) < 0) {
+			warnx("db_auth_insert");
+			return;
+		}
 	}
 	return;
 }
@@ -87,12 +94,12 @@ add_login(struct ort *o, char *login)
 int
 main(int argc, char **argv)
 {
-	char 			c, *login, *dbfile;
+	char 			c, *login, *pass, *dbfile;
 	struct ort		*o;
 	int				action = ACT__MAX;
 
-	login = dbfile = NULL;
-	while ((c = getopt(argc, argv, "adf:lu:")) != -1) {
+	login = pass = dbfile = NULL;
+	while ((c = getopt(argc, argv, "adf:lp:u:")) != -1) {
 		switch (c) {
 			case 'a':
 				action = ACT_ADD;
@@ -109,6 +116,9 @@ main(int argc, char **argv)
 				action = ACT_LIST;
 				break;
 			case 'p':
+				if ((pass = strdup(optarg)) == NULL)
+					err(1,"strdup");
+					/* NOT REACHED */
 				break;
 			case 'u':
 				if ((login = strdup(optarg)) == NULL)
@@ -148,7 +158,7 @@ main(int argc, char **argv)
 
 	switch(action) {
 		case ACT_ADD:
-			add_login(o,login);
+			add_login(o,login,pass);
 			break;
 		case ACT_DEL:
 			del_login(o,login);
