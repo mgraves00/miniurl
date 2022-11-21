@@ -1,0 +1,40 @@
+#roles { role loggedin; };
+struct auth {
+	comment "user table";
+	field id int rowid noexport;
+	field username text unique comment "user name";
+	field password password comment "user password";
+	search username, password streq: name user limit 1;
+	delete id eq: name id;
+	delete username streq: name username;
+	insert;
+	list;
+};
+struct cookie {
+	comment "cookie table";
+	field id int rowid noexport;
+	field cookie text unique comment "cookie hash";
+	field user:auth.username text actdel cascade comment "user name";
+	search cookie streq: name hash limit 1;
+	insert;
+	list;
+};
+struct miniurl {
+	comment "redirection table";
+	field id int rowid noexport;
+	field hash text unique comment "short hash";
+	field url text unique comment "redirect URL";
+	field count int default 0 comment "number of time hit";
+	search hash streq: name hash limit 1;
+	update hash, url:: name hash comment "udpate hash/url";
+#	update url streq: name updaterecurl;
+	update count inc:: name counter comment "update the counter when hash is selected";
+	delete hash streq: name hash;
+	delete id eq: name id;
+	insert;
+	list;
+#	roles all { search hash; update count; };
+#	roles loggedin { all; };
+#	roles all { search findhash; };
+};
+
