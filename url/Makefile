@@ -1,10 +1,10 @@
-#
+# $Id$
 .SUFFIXES: .ort .h
 
-#OBJS	=	miniurl.o \
-#			main.o
 SRCS	=	miniurl.c \
 			main.c
+
+CLEANFILES+= miniurl.c miniurl.h
 
 ORTFILE= ${.CURDIR}/../miniurl.ort
 
@@ -17,20 +17,10 @@ CFLAGS		+= ${CF_PKG} -I ${.CURDIR}/obj
 PROG	= url
 NOMAN	= 1
 
-#all: url
-
-#url: ${OBJS}
-#	${CC} ${LDFLAGS} ${LDADD} --static -o ${.TARGET} ${OBJS}
-
 miniurl.h: ${ORTFILE}
 	ort-c-header -v ${ORTFILE} > ${.TARGET}
 
 miniurl.c: ${ORTFILE} miniurl.h
 	ort-c-source -v -h miniurl.h ${ORTFILE} > ${.TARGET}
-
-clean:
-	-rm miniurl.h
-	-rm miniurl.c
-	-rm miniurl.o
 
 .include <bsd.prog.mk>

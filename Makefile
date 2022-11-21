@@ -6,6 +6,7 @@ SUBDIR= url urluser
 
 ORTFILE= miniurl.ort
 SQL= miniurl.sql
+CLEANFILES+=	miniurl.db miniurl.sql
 
 #all: ${SQL} prepdb
 
@@ -15,9 +16,5 @@ prepdb: ${SQL}
 
 .ort.sql: ${ORTFILE}
 	ort-sql ${.IMPSRC} > ${.TARGET}
-
-clean:
-	-rm miniurl.db
-	-rm miniurl.sql
 
 .include <bsd.subdir.mk>
