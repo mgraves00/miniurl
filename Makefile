@@ -2,7 +2,7 @@
 .PHONY: prepdb miniurl
 .SUFFIXES: .ort .sql
 
-SUBDIR= url urlpass
+SUBDIR= url urluser
 
 ORTFILE= miniurl.ort
 SQL= miniurl.sql
