@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script>
+			form = document.findElement('form');
+			hash = document.findElement('hash');
+			form.onsubmit = function() {
+				if (hash !== undefined && length(hash) > 0) {
+					form.action = "/"+hash
+				}
+				form.default()
+			}
+		</script>
+	</head>
+	<body>
+		<div>
+			<form action="/index" method="get">
+				<input type="text" name="hash">
+				<input type="button" name="go" value="Go">
+			</form>
+		<div>
+	</body>
+</html>
