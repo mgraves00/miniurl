@@ -12,7 +12,7 @@ LD_PKG	!= pkg-config --libs kcgi sqlbox 2>/dev/null
 CF_PKG	!= pkg-config --cflags kcgi sqlbox 2>/dev/null
 
 LDADD		+= ${LD_PKG} -lpthread -L/usr/lib -lm -static
-CFLAGS		+= ${CF_PKG} -I ${.CURDIR}/obj
+CFLAGS		+= ${CF_PKG} -I ${.CURDIR}/obj -g
 
 PROG	= url
 NOMAN	= 1
