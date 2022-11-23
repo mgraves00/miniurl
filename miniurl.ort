@@ -4,7 +4,7 @@ struct auth {
 	field id int rowid noexport;
 	field username text unique comment "user name";
 	field password password comment "user password";
-	search username, password streq: name user limit 1;
+	search username, password: name user limit 1;
 	delete id eq: name id;
 	delete username streq: name username;
 	insert;
