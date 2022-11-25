@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html>
 	<head>
+		<link rel="stylesheet" type="text/css" href="/static/style.css">
 	</head>
 	<body>
-		<div>
+		<div class="login">
 			<form action="/login" method="post">
+				<label for="username">Name</label>
 				<input type="text" name="username">
+				<label for="password">Password</label>
 				<input type="password" name="password">
-				<input type="button" name="submit" value="Save">
+				<input type="submit" value="Login">
 			</form>
 		<div>
 	</body>

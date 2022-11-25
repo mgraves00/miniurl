@@ -1,23 +1,31 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<script>
-			form = document.findElement('form');
-			hash = document.findElement('hash');
-			form.onsubmit = function() {
-				if (hash !== undefined && length(hash) > 0) {
-					form.action = "/"+hash
-				}
-				form.default()
-			}
-		</script>
+		<link rel="stylesheet" type="text/css" href="/static/style.css">
 	</head>
 	<body>
+		<div class="bar">
+			<div class="login"><a href="/login">Login</a></div>
+			<div class="user">@@user@@</div>
+		</div>
 		<div>
-			<form action="/index" method="get">
-				<input type="text" name="hash">
-				<input type="button" name="go" value="Go">
+			<form id="lookup" action="/index" method="get">
+				<input id="hash" type="text">
+				<input type="submit" value="Go">
 			</form>
 		<div>
+		<script>
+		console.log('loading script');
+		form = document.getElementById('lookup');
+		form.onsubmit = function(evt) {
+			hash = document.getElementById('hash');
+			console.log('submitting query');
+			console.log('hash = '+hash.value);
+			if (hash !== undefined && hash.value.length > 0) {
+				form.action = "/"+hash.value
+			}
+			/*evt.preventDefault();*/
+		};
+		</script>
 	</body>
 </html>
