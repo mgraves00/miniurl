@@ -65,25 +65,42 @@ static const char *templates[PAGE__MAX] = {
 };
 
 enum key {
+	KEY__METHOD,
 	KEY_HASH,
 	KEY_URL,
 	KEY_USER,
-	KEY_METHOD,
 	KEY__MAX
 };
 
 static const char *const key_names[KEY__MAX] = {
+	"_method",
 	"hash",
 	"url",
 	"user",
-	"method",
 };
 
 static const struct kvalid keys[KEY__MAX] = {
+	{ kvalid_stringne, "_method" },
 	{ kvalid_slug, "hash" },
 	{ kvalid_stringne, "url" },
-	{ NULL, "user" },
-	{ NULL, "method" },
+	{ kvalid_stringne, "user" },
+};
+
+enum var {
+	VAR_HASH,
+	VAR_URL,
+	VAR_USER,
+	VAR_METHOD,
+	VAR_LIST,
+	VAR__MAX
+};
+
+static const char *const var_names[VAR__MAX] = {
+	"hash",
+	"url",
+	"user",
+	"_method",
+	"list",
 };
 
 enum auth_state {
@@ -114,7 +131,6 @@ kvalid_url(struct kpair *kp)
 	oldurl = kp->val;
 	while (reduced != 1) {
 		if ((er = khttp_urldecode(oldurl, &newurl)) != KCGI_OK) {
-//			kutil_warn(NULL,NULL,"khttp_urldecode: %s",kcgi_strerror(er));
 			return(0);
 		}
 		if (strcmp(oldurl,newurl) != 0) {
@@ -195,15 +211,10 @@ lookup_slug(struct session *s, char **url)
 {
 	struct miniurl		*murl;
 	char				*p;
-//	p = s->r.fullpath;
-//	if (p[0] == '/')	/* move past the initial root path */
-//		p++;
-//	if (validate_slug(p) != 0) {
 	if (validate_slug(s->r.pagename) != 0) {
 		*url = NULL;
 		return(0);
 	}
-//	if ((murl = db_miniurl_get_hash(s->o, p)) == NULL) {
 	if ((murl = db_miniurl_get_hash(s->o, s->r.pagename)) == NULL) {
 		*url = NULL;
 		return(0);
@@ -222,21 +233,42 @@ value_writer(size_t idx, void *args)
 	enum kcgi_err	er = KCGI_OK;
 	struct session	*s = args;
 	char			*p;
-	kutil_logx(&s->r, "DEBUG", s->user, "value_writer: key %s(%lu)",key_names[idx],idx);
+	struct miniurl	*u;
+	kutil_logx(&s->r, "DEBUG", s->user, "value_writer: VAR %s(%lu)",var_names[idx],idx);
 	switch (idx) {
-		case KEY_HASH:
-		case KEY_URL:
-			if (s->r.fieldsz > 0) {
-//			p = s->r.fieldmap[idx]->val != NULL ? s->r.fieldmap[idx]->val : "";
-//			er = khttp_puts(&s->r, p);
-				er = khttp_puts(&s->r, s->r.fieldmap[idx]->val);
+		case VAR_HASH:
+		case VAR_URL:
+			if (strlen(s->r.path) > 0) {
+				if ((u = db_miniurl_get_hash(s->o,s->r.path)) == NULL) {
+					kutil_logx(&s->r, "DEBUG", s->user, "failed to find hash %s",s->r.path);
+					er = KCGI_SYSTEM;
+				} else {
+					er = khttp_puts(&s->r, (idx == VAR_HASH) ? u->hash : u->url);
+				}
 			}
 			break;
-		case KEY_USER:
+		case VAR_USER:
 			er = khttp_puts(&s->r, s->user);
 			break;
-		case KEY_METHOD:
-			er = khttp_puts(&s->r, "POST");
+		case VAR_METHOD:
+			if (strlen(s->r.path) > 0) {
+				er = khttp_puts(&s->r, "PUT");
+			} else {
+				er = khttp_puts(&s->r, "POST");
+			}
+			break;
+		case VAR_LIST:
+			{
+				struct miniurl_q	*list;
+				struct miniurl		*u;
+				list = db_miniurl_list(s->o);
+				TAILQ_FOREACH(u, list, _entries) {
+					khttp_printf(&s->r,"<li><span>%s</span><span>%s</span><span>%lld</span><span>"
+								"<a href=\"/hash/%s\">Edit</a><a href=\"\">Delete</a></span></li>\n",
+							u->hash, u->url, u->count, u->hash);
+				}
+				db_miniurl_freeq(list);
+			}
 			break;
 		default: /* skip unknown keys */
 			er = KCGI_OK;
@@ -255,14 +287,14 @@ show_page(struct session *s, int page)
 {
 	enum kcgi_err	er;
 	struct ktemplate t = {
-		.key = key_names,
-		.keysz = KEY__MAX,
+		.key = var_names,
+		.keysz = VAR__MAX,
 		.arg = s,
 		.cb = value_writer
 	};
 	if ((er = khttp_body(&s->r)) != KCGI_OK) {
-		kutil_errx(&s->r,s->user,"khttp_body: %s",kcgi_strerror(er));
-		/* NO RETURN */
+		kutil_warnx(&s->r,s->user,"khttp_body: %s",kcgi_strerror(er));
+		return;
 	}
 	switch(page) {
 		case PAGE_LOGIN:
@@ -272,7 +304,6 @@ show_page(struct session *s, int page)
 			}
 			break;
 		case PAGE_LIST:
-			// get list of records
 			if ((er = khttp_template(&s->r, &t, templates[PAGE_LIST])) != KCGI_OK) {
 				kutil_warnx(&s->r,s->user,"khttp_template(PAGE_LIST): %s",kcgi_strerror(er));
 				return;
@@ -297,13 +328,19 @@ show_page(struct session *s, int page)
 }
 
 void
-send_redirect(struct session *s, char *loc)
+send_redirect(struct session *s, char *loc, int code)
 {
-	khttp_head(&s->r, kresps[KRESP_STATUS], "%s", khttps[KHTTP_301]);
+	char	buf[64];
+	khttp_head(&s->r, kresps[KRESP_STATUS], "%s", khttps[code]);
 	khttp_head(&s->r, kresps[KRESP_LOCATION], "%s", loc);
 	khttp_head(&s->r, kresps[KRESP_EXPIRES], "%s", "0");
 	khttp_head(&s->r, kresps[KRESP_CACHE_CONTROL], "%s", "no-cache, no-store, must-revalidate");
 	khttp_head(&s->r, kresps[KRESP_PRAGMA], "%s", "no-cache");
+	if (s->cookie != NULL) {
+		khttp_epoch2str(time(NULL) + 1800, buf, sizeof(buf));
+		khttp_head(&s->r, kresps[KRESP_SET_COOKIE],
+			"%s=%s; path=/; expires=%s", COOKIENAME, s->cookie, buf);
+	}
 	khttp_body(&s->r);
 }
 
@@ -317,10 +354,11 @@ send_error(struct session *s, int code)
 void
 delete_slug(struct session *s)
 {
-	if (validate_slug(s->r.path))
-		kutil_errx(NULL,NULL,"delete_slug(validate)");
-		/* NO RETURN */
-	db_miniurl_delete_hash(s->o, s->r.path);
+	if (s->r.fieldsz == 0) {
+		kutil_warnx(&s->r,s->user,"delete_slug: no hash");
+		return;
+	}
+	db_miniurl_delete_hash(s->o, s->r.fieldmap[KEY_HASH]->val);
 	return;
 }
 
@@ -331,22 +369,13 @@ add_slug(struct session *s)
 	char				*hash = NULL;
 	int 				i;
 	if (s->r.fieldsz == 0) {
-		kutil_warnx(&s->r,s->user,"add_slug no data");
+		kutil_warnx(&s->r,s->user,"add_slug no fields");
 		return;
 	}
-	//XXX URL should already be validated by kvalid_url()
-	if (s->r.fieldmap[KEY_URL]->state != KPAIR_VALID) {
-		kutil_warnx(&s->r,s->user,"add_slug: invalid url specified");
-		return;
-	}
-	/* check to see if we have been given a hash... it should be validated */
+	/* check to see if we have been given a hash... it should already be validated */
 	if (s->r.fieldmap[KEY_HASH] != NULL && s->r.fieldmap[KEY_HASH]->state == KPAIR_VALID) {
-		if (validate_slug(s->r.fieldmap[KEY_HASH]->val) == 0) {
-			if ((hash = strdup(s->r.fieldmap[KEY_HASH]->val)) == NULL) {
-				kutil_warn(&s->r,s->user,"add_slug: strdup");
-			}
-		} else {
-			kutil_warnx(&s->r,s->user,"add_slug: invalid hash specified");
+		if ((hash = strdup(s->r.fieldmap[KEY_HASH]->val)) == NULL) {
+			kutil_warn(&s->r,s->user,"add_slug: strdup");
 			return;
 		}
 	/* otherwise we need to generate one */
@@ -365,26 +394,29 @@ add_slug(struct session *s)
 void
 update_slug(struct session *s)
 {
-	struct kpair		*kv=NULL;
-	int 				i;
 	if (s->r.fieldsz == 0) {
-		kutil_warn(NULL,NULL,"update_slug no data");
+		kutil_warnx(&s->r,s->user,"update_slug no fields");
 		return;
 	}
-	for (i = 0; i < s->r.fieldsz; i++) {
-		if (strcmp(s->r.fields[i].key, "url"))
-			kv = &s->r.fields[i];
-	}
-	if (kv == NULL) {
-		kutil_warn(NULL,NULL,"update_slug no url found");
+	if (s->r.fieldmap[KEY_URL] == NULL || s->r.fieldmap[KEY_URL]->val == NULL) {
+		kutil_warnx(&s->r,s->user,"update_slug no url found");
 		return;
 	}
-	if (validate_slug(s->r.path))
-		kutil_errx(NULL,NULL,"update_slug(validate)");
-		/* NO RETURN */
-	if (db_miniurl_update_hash(s->o, s->r.path, kv->val) == 0)
-		kutil_errx(NULL,NULL,"update_slug()");
-		/* NO RETURN */
+	if (db_miniurl_update_url(s->o, s->r.fieldmap[KEY_URL]->val, s->r.fieldmap[KEY_HASH]->val) == 0) {
+		kutil_warnx(&s->r,s->user,"update_slug(db_miniurl_update_url)");
+		return;
+	}
+	return;
+}
+
+void
+update_slug_counter(struct session *s)
+{
+	if (validate_slug(s->r.pagename) != 0) {
+		kutil_warnx(&s->r,s->user,"update_slug_counter invalid slug");
+		return;
+	}
+	db_miniurl_update_counter(s->o, 1, s->r.pagename);
 	return;
 }
 
@@ -453,20 +485,18 @@ check_cookie(struct session *s)
 	kutil_logx(&s->r, "DEBUG", NULL, "found %d",found);
 	if (found == -1)
 		return(AUTH_NONE);
-
 	kutil_logx(&s->r, "DEBUG", NULL, "cookie %s",s->r.cookies[i].val);
 	if ((c = db_cookie_get_hash(s->o, s->r.cookies[i].val)) == NULL) {
 		return(AUTH_NONE);
 	}
-	kutil_logx(&s->r, "DEBUG", NULL, "cookie value %s",c->cookie);
-	// cookie found.
-	if ((s->cookie = strdup(c->cookie)) == NULL) {
-		kutil_logx(&s->r,"DEBUG",NULL,"strdup(cookie)");
-		return(AUTH_ERROR);
-	}
 	kutil_logx(&s->r, "DEBUG", NULL, "cookie user %s",c->user);
 	if ((s->user = strdup(c->user)) == NULL) {
 		kutil_logx(&s->r,"DEBUG",NULL,"strdup(user)");
+		return(AUTH_ERROR);
+	}
+	kutil_logx(&s->r, "DEBUG", NULL, "cookie value %s",c->cookie);
+	if ((s->cookie = strdup(c->cookie)) == NULL) {
+		kutil_logx(&s->r,"DEBUG",NULL,"strdup(cookie)");
 		return(AUTH_ERROR);
 	}
 	db_cookie_free(c);
@@ -482,7 +512,6 @@ main(void)
 	struct session		sess;
 	char *				slug_url;
 	int					slug_found;
-	char				buf[64];
 
 	memset(&sess, 0, sizeof(struct session));
 
@@ -492,14 +521,24 @@ main(void)
 	}
 
 	if ((er = khttp_parse(&sess.r, keys, KEY__MAX, pages, PAGE__MAX, PAGE_INDEX)) != KCGI_OK) {
-		kutil_errx(NULL,NULL,"khttp_parse: %s", kcgi_strerror(er));
-		/* NO RETURN */
+		fprintf(stderr,"khttp_parse: %s", kcgi_strerror(er));
+		return(EXIT_FAILURE);
 	}
 
 	kutil_logx(&sess.r,"DEBUG",sess.user,"dbfile: %s",DBFILE);
 	if ((sess.o = db_open(DBFILE)) == NULL) {
-		kutil_errx(&sess.r,NULL,"db_open");
-		/* NO RETURN */
+		kutil_warnx(&sess.r,NULL,"db_open");
+		return(EXIT_FAILURE);
+	}
+
+	if (sess.r.method == KMETHOD_POST && sess.r.fieldmap[KEY__METHOD] != NULL &&
+			sess.r.fieldmap[KEY__METHOD]->state == KPAIR_VALID) {
+		if (strncasecmp(sess.r.fieldmap[KEY__METHOD]->val,"PUT",sess.r.fieldmap[KEY__METHOD]->valsz) == 0) {
+			sess.r.method = KMETHOD_PUT;
+		} else if (strncasecmp(sess.r.fieldmap[KEY__METHOD]->val,"DELETE",sess.r.fieldmap[KEY__METHOD]->valsz) == 0) {
+			sess.r.method = KMETHOD_DELETE;
+		} else
+			sess.r.method = KMETHOD__MAX;
 	}
 
 	authorized = check_cookie(&sess);
@@ -518,7 +557,7 @@ main(void)
 			switch (sess.r.page) {
 				case PAGE_LOGIN:
 					if (authorized == AUTH_OK) {
-						send_redirect(&sess, "/urls?from=pagelogin");
+						send_redirect(&sess, "/urls", KHTTP_301);
 					} else {
 						show_page(&sess, PAGE_LOGIN);
 					}
@@ -527,14 +566,14 @@ main(void)
 					if (authorized == AUTH_OK) {
 						show_page(&sess, PAGE_LIST);
 					} else {
-						send_redirect(&sess, "/index?from=pagelist");
+						send_redirect(&sess, "/index", KHTTP_301);
 					}
 					break;
 				case PAGE_HASH:
 					if (authorized == AUTH_OK) {
 						show_page(&sess, PAGE_HASH);
 					} else {
-						send_redirect(&sess, "/index?from=pageurl");
+						send_redirect(&sess, "/index", KHTTP_301);
 					}
 					break;
 				case PAGE__MAX:
@@ -544,10 +583,11 @@ main(void)
 					kutil_logx(&sess.r,"DEBUG",sess.user,"slug url: %s",slug_url);
 					if (slug_found) {
 						kutil_logx(&sess.r,"DEBUG",sess.user,"sending redirect");
-						send_redirect(&sess,slug_url);
+						send_redirect(&sess,slug_url, KHTTP_301);
+						update_slug_counter(&sess);
 						free(slug_url);
 					} else {
-						send_redirect(&sess,"/index?from=pagemax");
+						send_redirect(&sess,"/index",KHTTP_301);
 					}
 					break;
 				default:
@@ -558,21 +598,18 @@ main(void)
 			switch (sess.r.page) {
 				case PAGE_LOGIN:
 					if (authorized == AUTH_OK) {
-						send_redirect(&sess, "/index?from=postlogin");
+						send_redirect(&sess, "/urls", KHTTP_303);
 					} else if (check_auth(&sess) != AUTH_OK) {
-						send_redirect(&sess, "/login?from=postlogin");
+						send_redirect(&sess, "/login", KHTTP_303);
 					} else {
 						kutil_warnx(&sess.r, sess.user, "success auth for %s",sess.user);
-						khttp_epoch2str(time(NULL) + 1800, buf, sizeof(buf));
-						khttp_head(&sess.r, kresps[KRESP_SET_COOKIE],
-							"%s=%s; path=/; expires=%s", COOKIENAME, sess.cookie, buf);
-						send_redirect(&sess, "/index?from=login");
+						send_redirect(&sess, "/urls", KHTTP_303);
 					}
 					break;
 				case PAGE_HASH:
 					if (authorized == AUTH_OK) {
 						add_slug(&sess);
-						send_redirect(&sess, "/index?from=posturl");
+						send_redirect(&sess, "/urls", KHTTP_303);
 					} else {
 						send_error(&sess, KHTTP_401);
 					}
@@ -587,7 +624,7 @@ main(void)
 				case PAGE_HASH:
 					if (authorized == AUTH_OK) {
 						update_slug(&sess);
-						send_redirect(&sess, "/index?from=put");
+						send_redirect(&sess, "/urls", KHTTP_303);
 					} else {
 						send_error(&sess, KHTTP_401);
 					}
@@ -601,7 +638,7 @@ main(void)
 				case PAGE_HASH:
 					if (authorized == AUTH_OK) {
 						delete_slug(&sess);
-						send_redirect(&sess, "/index?from=delete");
+						send_redirect(&sess, "/urls", KHTTP_303);
 					} else {
 						send_error(&sess, KHTTP_401);
 					}
