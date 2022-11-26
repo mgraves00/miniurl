@@ -1,5 +1,8 @@
 # $Id$
 .SUFFIXES: .ort .h
+.PHONY: regress distcheck
+
+.include "${.CURDIR}/../Makefile.inc"
 
 SRCS	=	miniurl.c \
 			main.c
@@ -16,6 +19,31 @@ CFLAGS		+= ${CF_PKG} -I ${.CURDIR}/obj -g
 
 PROG	= url
 NOMAN	= 1
+
+HTMLS	= index.html \
+		  edit.html \
+		  login.html \
+		  list.html
+
+install:
+#	@echo [[ ! -d $(DESTDIR)$(SHARDIR)/miniurl ]] && mkdir -p $(DESTDIR)$(SHARDIR)/miniurl
+	@echo mkdir -p $(DESTDIR)$(SBINDIR)
+	@echo mkdir -p $(DESTDIR)$(CGIBIN)
+	@echo mkdir -p $(DESTDIR)$(HTDOCS)
+	@echo $(INSTALL_DATA) $(HTMLS) $(DESTDIR)$(HTDOCS)
+	@echo $(INSTALL_DATA) $(ORTFILE) $(DESTDIR)$(SHARDIR)/miniurl
+	@echo $(INSTALL_PROGRAM) $(PROG) $(DESTDIR)$(CGIBIN)
+
+uninstall:
+	@echo rm -f $(DESTDIR)$(SHAREDIR)/miniurl/miniurl.ort
+	@echo rmdir $(DESTDIR)$(SHAREDIR)/miniurl
+	@echo rm -f $(DESTDIR)$(CGIBIN)/$(PROG)
+
+regress:
+	# do nothing
+
+distcheck:
+	# do nothing
 
 miniurl.h: ${ORTFILE}
 	ort-c-header -v ${ORTFILE} > ${.TARGET}
