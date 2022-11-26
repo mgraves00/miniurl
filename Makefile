@@ -8,13 +8,10 @@ ORTFILE= miniurl.ort
 SQL= miniurl.sql
 CLEANFILES+=	miniurl.db miniurl.sql
 
-#all: ${SQL} prepdb
-
 prepdb: ${SQL}
-	sqlite3 miniurl.db < ${SQL}
-	sqlite3 miniurl.db < populate.sql
+	sqlite3 ${DESTDIR}miniurl.db < ${SQL}
+	sqlite3 ${DESTDIR}miniurl.db < populate.sql
 
-.ort.sql: ${ORTFILE}
-	ort-sql ${.IMPSRC} > ${.TARGET}
+.include "Makefile.inc"
 
 .include <bsd.subdir.mk>
