@@ -23,12 +23,11 @@ struct miniurl {
 	comment "redirection table";
 	field id int rowid noexport;
 	field hash text unique comment "short hash";
-	field url text unique comment "redirect URL";
+	field url text comment "redirect URL";
 	field count int default 0 comment "number of time hit";
 	search hash streq: name hash limit 1;
-	update hash, url:: name hash comment "udpate hash/url";
-#	update url streq: name updaterecurl;
-	update count inc:: name counter comment "update the counter when hash is selected";
+	update url: hash streq: name url comment "udpate url provided hash";
+	update count inc: hash streq: name counter comment "update the counter when hash is selected";
 	delete hash streq: name hash;
 	delete id eq: name id;
 	insert;
