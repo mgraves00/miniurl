@@ -35,6 +35,7 @@
 
 #define COOKIENAME		"url_authz"
 #define COOKIESZ		15
+#define COOKIETIME		1800
 #define SLUGSZ			8
 #define SLUG_CHARS	"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -350,7 +351,7 @@ send_redirect(struct session *s, char *loc, int code)
 	khttp_head(&s->r, kresps[KRESP_CACHE_CONTROL], "%s", "no-cache, no-store, must-revalidate");
 	khttp_head(&s->r, kresps[KRESP_PRAGMA], "%s", "no-cache");
 	if (s->cookie != NULL) {
-		khttp_epoch2str(time(NULL) + 1800, buf, sizeof(buf));
+		khttp_epoch2str(time(NULL) + COOKIETIME, buf, sizeof(buf));
 		khttp_head(&s->r, kresps[KRESP_SET_COOKIE],
 			"%s=%s; path=/; expires=%s", COOKIENAME, s->cookie, buf);
 	}
@@ -469,7 +470,7 @@ check_auth(struct session *s)
 	}
 	s->cookie = c;
 	kutil_logx(&s->r, "DEBUG", s->user, "cookie '%s'",s->cookie);
-	if ((rc = db_cookie_insert(s->o, s->cookie, s->user)) < 0) {
+	if ((rc = db_cookie_insert(s->o, s->cookie, s->user, time(NULL)+COOKIETIME)) < 0) {
 		kutil_logx(&s->r,"DEBUG",s->user,"db_cookie_insert failed %d", rc);
 		return(AUTH_ERROR);
 	}
@@ -484,7 +485,9 @@ check_cookie(struct session *s)
 	struct cookie		*c;
 	struct kpair		*kv;
 	int					i, found = -1;
+	time_t				check_time;
 
+	check_time = time(NULL);
 	kutil_logx(&s->r, "DEBUG", NULL, "cookiesz %lu",s->r.cookiesz);
 	if (s->r.cookiesz == 0)
 		return(AUTH_NONE);
@@ -502,6 +505,10 @@ check_cookie(struct session *s)
 	if ((c = db_cookie_get_hash(s->o, s->r.cookies[i].val)) == NULL) {
 		return(AUTH_NONE);
 	}
+	if (c->last <= check_time) { /* expired cookie found (and all other old cookies) */
+		db_cookie_delete_old(s->o, check_time); /* ignore if delete fails */
+		return(AUTH_ERROR);
+	}
 	kutil_logx(&s->r, "DEBUG", NULL, "cookie user %s",c->user);
 	if ((s->user = strdup(c->user)) == NULL) {
 		kutil_logx(&s->r,"DEBUG",NULL,"strdup(user)");
@@ -513,8 +520,17 @@ check_cookie(struct session *s)
 		return(AUTH_ERROR);
 	}
 	db_cookie_free(c);
+	if (db_cookie_update_last(s->o, check_time+COOKIETIME, s->cookie) == 0) {
+		kutil_logx(&s->r,"DEBUG",NULL,"cookie_update_last");
+		/* failed to update the last use... but we got a good cookie... skip */
+	}
 	kutil_logx(&s->r, "DEBUG", NULL, "cookie rc AUTH_OK");
 	return(AUTH_OK);
+}
+
+void
+expire_cookies(struct session *s) {
+	return;
 }
 
 int
