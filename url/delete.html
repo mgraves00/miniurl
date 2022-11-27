@@ -3,7 +3,7 @@
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" type="text/css" href="/static/bulma.css">
-		<title>Mini URL</title
+		<title>Mini URL</title>
 	</head>
 	<body>
 		<nav class="navbar" role="navigation" aria-label="main navigation">
@@ -11,21 +11,21 @@
 		</nav>
 		<section class="section">
 			<div class="container">
-				<form class="box" id="addedit" action="/hash" method="POST">
-					<input type="hidden" name="_method" value="@@_method@@">
+				<form class="box" id="delete" action="/hash" method="POST">
+					<input type="hidden" name="_method" value="delete">
 					<div class="field">
 						<label class="label is-sr-only" for="hash">Hash</label>
 						<div class="control">
-							<input class="input" type="text" name="hash" value="@@hash@@" placeholder="Custom hash or leave blank for generated hash">
+							<input class="input" type="text" name="hash" value="@@hash@@" placeholder="Hash" readonly>
 						</div>
 					</div>
 					<div class="field">
 						<label class="label is-sr-only" for="url">URL</label>
 						<div class="control">
-							<input class="input" type="text" name="url" value="@@url@@" placeholder="URL">
+							<input class="input" type="text" name="url" value="@@url@@" placeholder="URL" readonly>
 						</div>
 					</div>
-					<input class="button is-primary" type="submit" name="submit" value="Save">
+					<input class="button is-primary" type="submit" name="submit" value="Delete">
 				</form>
 			</div>
 		</section>
