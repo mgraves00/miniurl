@@ -15,9 +15,13 @@ struct cookie {
 	field id int rowid noexport;
 	field cookie text unique comment "cookie hash";
 	field user:auth.username text actdel cascade comment "user name";
+	field last epoch;
 	search cookie streq: name hash limit 1;
+	update last set: cookie streq: name last comment "update the last use time";
 	insert;
 	list;
+	delete cookie streq: name cookie comment "delete cookies by cookie";
+	delete last le: name old comment "delete cookies which have expired";
 };
 struct miniurl {
 	comment "redirection table";
