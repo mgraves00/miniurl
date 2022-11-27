@@ -263,9 +263,10 @@ value_writer(size_t idx, void *args)
 				struct miniurl		*u;
 				list = db_miniurl_list(s->o);
 				TAILQ_FOREACH(u, list, _entries) {
-					khttp_printf(&s->r,"<li><span>%s</span><span>%s</span><span>%lld</span><span>"
-								"<a href=\"/hash/%s\">Edit</a><a href=\"\">Delete</a></span></li>\n",
-							u->hash, u->url, u->count, u->hash);
+					khttp_printf(&s->r,"<tr><td>%s</td><td>%s</td><td>%lld</td><td>"
+								"<span class=\"icon\"><a href=\"/hash/%s\"><i class=\"fa-solid fa-pen-to-square\"></i></a></span>"
+								"<span class=\"icon\"><a href=\"/dhash/%s\"><i class=\"fa-solid fa-trash-can\"></i></a></td></tr></span>\n",
+							u->hash, u->url, u->count, u->hash, u->hash);
 				}
 				db_miniurl_freeq(list);
 			}
@@ -292,6 +293,7 @@ show_page(struct session *s, int page)
 		.arg = s,
 		.cb = value_writer
 	};
+	khttp_head(&s->r, kresps[KRESP_STATUS], "%s", khttps[KHTTP_200]);
 	if ((er = khttp_body(&s->r)) != KCGI_OK) {
 		kutil_warnx(&s->r,s->user,"khttp_body: %s",kcgi_strerror(er));
 		return;
@@ -537,8 +539,7 @@ main(void)
 			sess.r.method = KMETHOD_PUT;
 		} else if (strncasecmp(sess.r.fieldmap[KEY__METHOD]->val,"DELETE",sess.r.fieldmap[KEY__METHOD]->valsz) == 0) {
 			sess.r.method = KMETHOD_DELETE;
-		} else
-			sess.r.method = KMETHOD__MAX;
+		}
 	}
 
 	authorized = check_cookie(&sess);
