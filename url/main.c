@@ -268,10 +268,10 @@ value_writer(size_t idx, void *args)
 				struct miniurl		*u;
 				list = db_miniurl_list(s->o);
 				TAILQ_FOREACH(u, list, _entries) {
-					khttp_printf(&s->r,"<tr><td>%s</td><td>%s</td><td>%lld</td><td>"
+					khttp_printf(&s->r,"<tr><td><a href=\"/%s\">%s</a></td><td>%s</td><td>%lld</td><td>"
 								"<span class=\"icon\"><a href=\"/hash/%s\"><i class=\"fa-solid fa-pen-to-square\"></i></a></span>"
 								"<span class=\"icon\"><a href=\"/dhash/%s\"><i class=\"fa-solid fa-trash-can\"></i></a></td></tr></span>\n",
-							u->hash, u->url, u->count, u->hash, u->hash);
+							u->hash, u->hash, u->url, u->count, u->hash, u->hash);
 				}
 				db_miniurl_freeq(list);
 			}
