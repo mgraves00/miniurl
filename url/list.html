@@ -1,12 +1,31 @@
 <!DOCTYPE html>
 <html>
 	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" type="text/css" href="/static/bulma.css">
+		<link rel="stylesheet" type="text/css" href="/static/fontawesome.css">
+		<title>Mini URL</title>
 	</head>
 	<body>
-		<div>
-			<ul>
-				@@list@@
-			</ul>
-		<div>
+		<nav class="navbar" role="navigation" aria-label="main navigation">
+			<div class="navbar-item">@@user@@</div>
+		</nav>
+		<section class="section">
+			<div class="container is-align-items-center">
+				<table class="table is-striped">
+					<thead>
+						<tr>
+							<th>Hash</th>
+							<th>URL</th>
+							<th>Count</th>
+							<th>Actions<span class="icon"><a href="/hash"><i class="fa-solid fa-circle-plus"></i></a></span></th>
+						</tr>
+					</thead>
+					<tbody>
+					@@list@@
+					</tbody>
+				</table>
+			</div>
+		</section>
 	</body>
 </html>

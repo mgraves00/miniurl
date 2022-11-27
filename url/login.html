@@ -1,17 +1,27 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<link rel="stylesheet" type="text/css" href="/static/style.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" type="text/css" href="/static/bulma.css">
+		<title>Mini URL</title>
 	</head>
 	<body>
-		<div class="login">
-			<form action="/login" method="post">
-				<label for="username">Name</label>
-				<input type="text" name="username">
-				<label for="password">Password</label>
-				<input type="password" name="password">
-				<input type="submit" value="Login">
+		<section class="section">
+		<div class="container">
+			<form class="box" action="/login" method="post">
+				<div class="field">
+					<label class="label is-sr-only" for="username">Name</label>
+					<input class="input" type="text" name="username" placeholder="Username">
+				</div>
+				<div class="field">
+					<label class="label is-sr-only" for="password">Password</label>
+					<input class="input" type="password" name="password" placeholder="Password">
+				</div>
+				<div class="field">
+					<input class="button is-primary" type="submit" value="Login">
+				</div>
 			</form>
-		<div>
+		</div>
+		</section>
 	</body>
 </html>

@@ -1,21 +1,31 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<link rel="stylesheet" type="text/css" href="/static/style.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" type="text/css" href="/static/bulma.css">
+		<title>Mini URL</title>
 	</head>
 	<body>
-		<div class="bar">
-			<div class="login"><a href="/login">Login</a></div>
-			<div class="user">@@user@@</div>
-		</div>
-		<div>
-			<form id="lookup" action="/index" method="get">
-				<input id="hash" type="text">
-				<input type="submit" value="Go">
-			</form>
-		<div>
+		<nav class="navbar" role="navigation" aria-label="main navigation">
+			<div class="navbar-item"> <a href="/login">Login</a> </div>
+			<div class="navbar-item"> @@user@@</div>
+		</nav>
+		<section class="section">
+			<div class="container">
+				<form class="box" id="lookup" action="/index" method="get">
+					<div class="field has-addons">
+						<label class="label is-sr-only" for="hash">HASH</label>
+						<div class="control">
+							<input class="input" id="hash" type="text" placeholder="Hash">
+						</div>
+						<div class="control">
+							<input class="button is-primary" type="submit" value="Go">
+						</div>
+					</div>
+				</form>
+			</div>
+		</section>
 		<script>
-		console.log('loading script');
 		form = document.getElementById('lookup');
 		form.onsubmit = function(evt) {
 			hash = document.getElementById('hash');
@@ -24,8 +34,8 @@
 			if (hash !== undefined && hash.value.length > 0) {
 				form.action = "/"+hash.value
 			}
-			/*evt.preventDefault();*/
 		};
 		</script>
 	</body>
 </html>
+
