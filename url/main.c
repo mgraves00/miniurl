@@ -47,6 +47,7 @@ enum page {
 	PAGE_LOGIN,
 	PAGE_LIST,
 	PAGE_HASH,
+	PAGE_DELETE,
 	PAGE__MAX
 };
 
@@ -55,6 +56,7 @@ static const char *pages[PAGE__MAX] = {
 	"login",	/* PAGE_LOGIN */
 	"urls",		/* PAGE_LIST */
 	"hash",		/* PAGE_HASH */
+	"dhash",	/* PAGE_DELETE */
 };
 
 static const char *templates[PAGE__MAX] = {
@@ -62,6 +64,7 @@ static const char *templates[PAGE__MAX] = {
 	PROGDIR"/login.html",
 	PROGDIR"/list.html",
 	PROGDIR"/edit.html",
+	PROGDIR"/delete.html",
 };
 
 enum key {
@@ -161,6 +164,8 @@ validate_slug(char *slug)
 	size_t i, slen;
 	slen = strlen(slug);
 	if (slen > SLUGSZ)		/* slug too long */
+		return(1);
+	if (slen <= 0)			/* slug length too short */
 		return(1);
 	for (i=0; i<slen; i++) {
 		if (strchr(ALLOWED, slug[i]) == NULL)  /* character not found */
@@ -314,6 +319,12 @@ show_page(struct session *s, int page)
 		case PAGE_HASH:
 			if ((er = khttp_template(&s->r, &t, templates[PAGE_HASH])) != KCGI_OK) {
 				kutil_warnx(&s->r,s->user,"khttp_template(PAGE_HASH): %s",kcgi_strerror(er));
+				return;
+			}
+			break;
+		case PAGE_DELETE:
+			if ((er = khttp_template(&s->r, &t, templates[PAGE_DELETE])) != KCGI_OK) {
+				kutil_warnx(&s->r,s->user,"khttp_template(PAGE_DELETE): %s",kcgi_strerror(er));
 				return;
 			}
 			break;
@@ -573,6 +584,13 @@ main(void)
 				case PAGE_HASH:
 					if (authorized == AUTH_OK) {
 						show_page(&sess, PAGE_HASH);
+					} else {
+						send_redirect(&sess, "/index", KHTTP_301);
+					}
+					break;
+				case PAGE_DELETE:
+					if (authorized == AUTH_OK) {
+						show_page(&sess, PAGE_DELETE);
 					} else {
 						send_redirect(&sess, "/index", KHTTP_301);
 					}
