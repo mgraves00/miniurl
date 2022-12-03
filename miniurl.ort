@@ -1,4 +1,6 @@
-#roles { role loggedin; };
+roles {
+	role admin comment "Admin role to add/remove/delete URLs";
+};
 struct auth {
 	comment "user table";
 	field id int rowid noexport;
@@ -9,6 +11,8 @@ struct auth {
 	delete username streq: name username;
 	insert;
 	list;
+	roles default { search user; };
+	roles admin { all; };
 };
 struct cookie {
 	comment "cookie table";
@@ -22,6 +26,8 @@ struct cookie {
 	list;
 	delete cookie streq: name cookie comment "delete cookies by cookie";
 	delete last le: name old comment "delete cookies which have expired";
+	roles default { search hash; delete old; };
+	roles admin { all; };
 };
 struct miniurl {
 	comment "redirection table";
@@ -36,8 +42,7 @@ struct miniurl {
 	delete id eq: name id;
 	insert;
 	list;
-#	roles all { search hash; update count; };
-#	roles loggedin { all; };
-#	roles all { search findhash; };
+	roles default { search hash; update counter; };
+	roles admin { all; };
 };
 
