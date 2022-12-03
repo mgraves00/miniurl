@@ -1,0 +1,56 @@
+.\" $Id$
+.\"
+.\" Copyright (c) 2022 Michael Graves
+.\" 
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\" 
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.Dd $Mdocdate$
+.Dt URLUSER 1
+.Os
+.Sh NAME
+.Nm urluser
+.Nd maniuplate user table in miniurl database
+.Sh SYNOPSIS
+.Nm urluser
+.Oc Fl f Ar dbfile
+.Oc Fl l
+.Nm urluser
+.Oc Fl f Ar dbfile
+.Oc Fl a|d
+.Op Fl u Ar username
+.Op Fl p Ar password
+.Sh DESCRIPTION
+The
+.Nm
+utility can add, delete and list users in the miniurl database.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl a
+Add the user with the name specified with the
+.Oc Fl u
+option.
+.It Fl d
+Delete the user with the name specified with the 
+.Oc Fl u
+option.
+.It Fl f Ar dbfile
+The path to the miniurl database file.  Required for all commands.
+.It Fl l
+List the current users in the database.
+.It Fl p Ar password
+Password to assign to the user specified using the
+.Oc Fl u
+option.  If this is not specified then the username will be requested from the terminal.
+.It Fl u Ar username
+Username to add or delete
+
