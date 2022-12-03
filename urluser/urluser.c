@@ -110,7 +110,7 @@ main(int argc, char **argv)
 			case 'f':
 				if ((dbfile = strdup(optarg)) == NULL)
 					err(1,"strdup");
-					/* NOT REACHED */
+					/* NOTREACHED */
 				break;
 			case 'l':
 				action = ACT_LIST;
@@ -118,16 +118,16 @@ main(int argc, char **argv)
 			case 'p':
 				if ((pass = strdup(optarg)) == NULL)
 					err(1,"strdup");
-					/* NOT REACHED */
+					/* NOTREACHED */
 				break;
 			case 'u':
 				if ((login = strdup(optarg)) == NULL)
 					err(1,"strdup");
-					/* NOT REACHED */
+					/* NOTREACHED */
 				break;
 			default:
 				usage();
-				/* NOT REACHED */
+				/* NOTREACHED */
 				break;
 		}
 	}
@@ -136,25 +136,26 @@ main(int argc, char **argv)
 	if (action == ACT__MAX) {
 		warnx("no action specified");
 		usage();
-		/* NOT REACHED */
+		/* NOTREACHED */
 	}
 	if (login == NULL && (action == ACT_ADD || action == ACT_DEL)) {
 		warnx("no username specified");
 		usage();
-		/* NOT REACHED */
+		/* NOTREACHED */
 	}
 	if (dbfile == NULL) {
 		warnx("no database specified");
 		usage();
-		/* NOT REACHED */
+		/* NOTREACHED */
 	}
 
 	// unveil to dbfile path
 	// pledge ops to open sqlite file
 	if ((o = db_open(dbfile)) == NULL) {
 		errx(1,"db_open");
-		/* NOT REACHED */
+		/* NOTREACHED */
 	}
+	db_role(o,ROLE_admin);
 
 	switch(action) {
 		case ACT_ADD:
