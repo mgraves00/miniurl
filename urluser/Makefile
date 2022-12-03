@@ -10,7 +10,7 @@ CLEANFILES+=	miniurl.c miniurl.h
 
 SRCS=	miniurl.c urluser.c
 PROG=	urluser
-NOMAN=1
+MAN=	urluser.1
 
 miniurl.h: ${ORTFILE}
 	ort-c-header -v ${ORTFILE} > ${.TARGET}
