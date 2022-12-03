@@ -34,10 +34,15 @@
 #define DBFILE PROGDIR"/miniurl.db"
 
 #define COOKIENAME		"url_authz"
+#define SLUG_CHARS		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+#define SLUGSZ			8
 #define COOKIESZ		15
 #define COOKIETIME		1800
-#define SLUGSZ			8
-#define SLUG_CHARS	"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+#define MAX_COOKIETIME	31557600
+
+long long cookie_time = COOKIETIME;
+char *cookie_name = COOKIENAME;
+int debug = 0;
 
 int kvalid_url(struct kpair *);
 int kvalid_slug(struct kpair *);
@@ -121,6 +126,18 @@ struct session {
 	char *cookie;
 	char *user;
 };
+
+void
+log_debug(const struct kreq *r, const char *level, const char *ident, const char *fmt, ...)
+{
+	va_list	ap;
+	if (debug != 0) {
+		va_start(ap, fmt);
+		kutil_vlogx(r, level, ident, fmt, ap);
+		va_end(ap);
+	}
+	return;
+}
 
 int
 kvalid_url(struct kpair *kp)
@@ -226,7 +243,7 @@ lookup_slug(struct session *s, char **url)
 		return(0);
 	}
 	if ((*url = strdup(murl->url)) == NULL) {
-		kutil_warnx(&s->r,NULL,"strdup(slug)");
+		log_debug(&s->r,"DEBUG",NULL,"strdup(slug)");
 		return(0);
 	}
 	db_miniurl_free(murl);
@@ -240,13 +257,13 @@ value_writer(size_t idx, void *args)
 	struct session	*s = args;
 	char			*p;
 	struct miniurl	*u;
-	kutil_logx(&s->r, "DEBUG", s->user, "value_writer: VAR %s(%lu)",var_names[idx],idx);
+	log_debug(&s->r, "DEBUG", s->user, "value_writer: VAR %s(%lu)",var_names[idx],idx);
 	switch (idx) {
 		case VAR_HASH:
 		case VAR_URL:
 			if (strlen(s->r.path) > 0) {
 				if ((u = db_miniurl_get_hash(s->o,s->r.path)) == NULL) {
-					kutil_logx(&s->r, "DEBUG", s->user, "failed to find hash %s",s->r.path);
+					log_debug(&s->r, "DEBUG", s->user, "failed to find hash %s",s->r.path);
 					er = KCGI_SYSTEM;
 				} else {
 					er = khttp_puts(&s->r, (idx == VAR_HASH) ? u->hash : u->url);
@@ -281,9 +298,9 @@ value_writer(size_t idx, void *args)
 			er = KCGI_OK;
 			break;
 	}
-	kutil_logx(&s->r, "DEBUG", s->user, "value_writer: er %d",er);
+	log_debug(&s->r, "DEBUG", s->user, "value_writer: er %d",er);
 	if (er != KCGI_OK) {
-		kutil_warnx(&s->r,s->user,"value_writer: %s",kcgi_strerror(er));
+		log_debug(&s->r,"DEBUG",s->user,"value_writer: %s",kcgi_strerror(er));
 		return(0);
 	}
 	return(1);
@@ -301,43 +318,43 @@ show_page(struct session *s, int page)
 	};
 	khttp_head(&s->r, kresps[KRESP_STATUS], "%s", khttps[KHTTP_200]);
 	if ((er = khttp_body(&s->r)) != KCGI_OK) {
-		kutil_warnx(&s->r,s->user,"khttp_body: %s",kcgi_strerror(er));
+		log_debug(&s->r,"DEBUG",s->user,"khttp_body: %s",kcgi_strerror(er));
 		return;
 	}
 	switch(page) {
 		case PAGE_LOGIN:
 			if ((er = khttp_template(&s->r, &t, templates[PAGE_LOGIN])) != KCGI_OK) {
-				kutil_warnx(&s->r,s->user,"khttp_template(PAGE_LOGIN): %s",kcgi_strerror(er));
+				log_debug(&s->r,"DEBUG",s->user,"khttp_template(PAGE_LOGIN): %s",kcgi_strerror(er));
 				return;
 			}
 			break;
 		case PAGE_LIST:
 			if ((er = khttp_template(&s->r, &t, templates[PAGE_LIST])) != KCGI_OK) {
-				kutil_warnx(&s->r,s->user,"khttp_template(PAGE_LIST): %s",kcgi_strerror(er));
+				log_debug(&s->r,"DEBUG",s->user,"khttp_template(PAGE_LIST): %s",kcgi_strerror(er));
 				return;
 			}
 			break;
 		case PAGE_HASH:
 			if ((er = khttp_template(&s->r, &t, templates[PAGE_HASH])) != KCGI_OK) {
-				kutil_warnx(&s->r,s->user,"khttp_template(PAGE_HASH): %s",kcgi_strerror(er));
+				log_debug(&s->r,"DEBUG",s->user,"khttp_template(PAGE_HASH): %s",kcgi_strerror(er));
 				return;
 			}
 			break;
 		case PAGE_DELETE:
 			if ((er = khttp_template(&s->r, &t, templates[PAGE_DELETE])) != KCGI_OK) {
-				kutil_warnx(&s->r,s->user,"khttp_template(PAGE_DELETE): %s",kcgi_strerror(er));
+				log_debug(&s->r,"DEBUG",s->user,"khttp_template(PAGE_DELETE): %s",kcgi_strerror(er));
 				return;
 			}
 			break;
 		case PAGE_INDEX:
 		default:
 			if ((er = khttp_template(&s->r, &t, templates[PAGE_INDEX])) != KCGI_OK) {
-				kutil_warnx(&s->r,s->user,"khttp_template(PAGE_INDEX): %s",kcgi_strerror(er));
+				log_debug(&s->r,"DEBUG",s->user,"khttp_template(PAGE_INDEX): %s",kcgi_strerror(er));
 				return;
 			}
 			break;
 	}
-	kutil_info(&s->r,s->user,"page '%s' path: %s",pages[page],s->r.fullpath);
+	log_debug(&s->r,"INFO",s->user,"page '%s' path: %s",pages[page],s->r.fullpath);
 	return;
 }
 
@@ -351,9 +368,9 @@ send_redirect(struct session *s, char *loc, int code)
 	khttp_head(&s->r, kresps[KRESP_CACHE_CONTROL], "%s", "no-cache, no-store, must-revalidate");
 	khttp_head(&s->r, kresps[KRESP_PRAGMA], "%s", "no-cache");
 	if (s->cookie != NULL) {
-		khttp_epoch2str(time(NULL) + COOKIETIME, buf, sizeof(buf));
+		khttp_epoch2str(time(NULL) + cookie_time, buf, sizeof(buf));
 		khttp_head(&s->r, kresps[KRESP_SET_COOKIE],
-			"%s=%s; path=/; expires=%s", COOKIENAME, s->cookie, buf);
+			"%s=%s; path=/; expires=%s", cookie_name, s->cookie, buf);
 	}
 	khttp_body(&s->r);
 }
@@ -369,7 +386,7 @@ void
 delete_slug(struct session *s)
 {
 	if (s->r.fieldsz == 0) {
-		kutil_warnx(&s->r,s->user,"delete_slug: no hash");
+		log_debug(&s->r,"DEBUG",s->user,"delete_slug: no hash");
 		return;
 	}
 	db_miniurl_delete_hash(s->o, s->r.fieldmap[KEY_HASH]->val);
@@ -383,13 +400,13 @@ add_slug(struct session *s)
 	char				*hash = NULL;
 	int 				i;
 	if (s->r.fieldsz == 0) {
-		kutil_warnx(&s->r,s->user,"add_slug no fields");
+		log_debug(&s->r,"DEBUG",s->user,"add_slug no fields");
 		return;
 	}
 	/* check to see if we have been given a hash... it should already be validated */
 	if (s->r.fieldmap[KEY_HASH] != NULL && s->r.fieldmap[KEY_HASH]->state == KPAIR_VALID) {
 		if ((hash = strdup(s->r.fieldmap[KEY_HASH]->val)) == NULL) {
-			kutil_warn(&s->r,s->user,"add_slug: strdup");
+			log_debug(&s->r,"DEBUG",s->user,"add_slug: strdup");
 			return;
 		}
 	/* otherwise we need to generate one */
@@ -397,7 +414,7 @@ add_slug(struct session *s)
 		gen_slug(&hash);
 	}
 	if ((rc = db_miniurl_insert(s->o, hash, s->r.fieldmap[KEY_URL]->val, 0)) < 0) {
-		kutil_warnx(&s->r,s->user,"add_slug: failed to insert (%s,%s,0): %d",hash,s->r.fieldmap[KEY_URL]->val,rc);
+		log_debug(&s->r,"DEBUG",s->user,"add_slug: failed to insert (%s,%s,0): %d",hash,s->r.fieldmap[KEY_URL]->val,rc);
 		free(hash);
 		return;
 	}
@@ -409,15 +426,15 @@ void
 update_slug(struct session *s)
 {
 	if (s->r.fieldsz == 0) {
-		kutil_warnx(&s->r,s->user,"update_slug no fields");
+		log_debug(&s->r,"DEBUG",s->user,"update_slug no fields");
 		return;
 	}
 	if (s->r.fieldmap[KEY_URL] == NULL || s->r.fieldmap[KEY_URL]->val == NULL) {
-		kutil_warnx(&s->r,s->user,"update_slug no url found");
+		log_debug(&s->r,"DEBUG",s->user,"update_slug no url found");
 		return;
 	}
 	if (db_miniurl_update_url(s->o, s->r.fieldmap[KEY_URL]->val, s->r.fieldmap[KEY_HASH]->val) == 0) {
-		kutil_warnx(&s->r,s->user,"update_slug(db_miniurl_update_url)");
+		log_debug(&s->r,"DEBUG",s->user,"update_slug(db_miniurl_update_url)");
 		return;
 	}
 	return;
@@ -427,7 +444,7 @@ void
 update_slug_counter(struct session *s)
 {
 	if (validate_slug(s->r.pagename) != 0) {
-		kutil_warnx(&s->r,s->user,"update_slug_counter invalid slug");
+		log_debug(&s->r,"DEBUG",s->user,"update_slug_counter invalid slug");
 		return;
 	}
 	db_miniurl_update_counter(s->o, 1, s->r.pagename);
@@ -453,31 +470,31 @@ check_auth(struct session *s)
 	}
 	if (u == NULL || p == NULL)
 		return(AUTH_BADUORP);
-	kutil_logx(&s->r, "DEBUG", NULL, "user '%s'",u->val);
-	kutil_logx(&s->r, "DEBUG", NULL, "pass '%s'",p->val);
+	log_debug(&s->r, "DEBUG", NULL, "user '%s'",u->val);
+	log_debug(&s->r, "DEBUG", NULL, "pass '%s'",p->val);
 	if ((a = db_auth_get_user(s->o, u->val, p->val)) == NULL) {
-		kutil_warnx(&s->r, NULL, "unknown user %s",u->val);
+		log_debug(&s->r, "DEBUG",NULL, "unknown user %s",u->val);
 		return(AUTH_BADUORP);
 	}
 	if ((s->user = strdup(a->username)) == NULL) {
-		kutil_warnx(&s->r,NULL,"strdup(username)");
+		log_debug(&s->r,"DEBUG",NULL,"strdup(username)");
 		return(AUTH_ERROR);
 	}
-	kutil_logx(&s->r, "DEBUG", NULL, "user found '%s'",s->user);
+	log_debug(&s->r, "DEBUG", NULL, "user found '%s'",s->user);
 	if (gen_cookie(&c) != 0) {
-		kutil_logx(&s->r, "DEBUG", NULL, "gen_cookie(error)");
+		log_debug(&s->r, "DEBUG", NULL, "gen_cookie(error)");
 		return(AUTH_ERROR);
 	}
 	s->cookie = c;
-	kutil_logx(&s->r, "DEBUG", s->user, "cookie '%s'",s->cookie);
+	log_debug(&s->r, "DEBUG", s->user, "cookie '%s'",s->cookie);
 	/* change role to admin so we can do admin stuff */
-	kutil_logx(&s->r, "DEBUG", s->user, "ROLE_default = %d, ROLE_admin = %d",(int)ROLE_default,(int)ROLE_admin);
+	log_debug(&s->r, "DEBUG", s->user, "ROLE_default = %d, ROLE_admin = %d",(int)ROLE_default,(int)ROLE_admin);
 	db_role(s->o,ROLE_admin);
-	if ((rc = db_cookie_insert(s->o, s->cookie, s->user, time(NULL)+COOKIETIME)) < 0) {
-		kutil_logx(&s->r,"DEBUG",s->user,"db_cookie_insert failed %d", rc);
+	if ((rc = db_cookie_insert(s->o, s->cookie, s->user, time(NULL)+cookie_time)) < 0) {
+		log_debug(&s->r,"DEBUG",s->user,"db_cookie_insert failed %d", rc);
 		return(AUTH_ERROR);
 	}
-	kutil_logx(&s->r, "DEBUG", NULL, "success");
+	log_debug(&s->r, "DEBUG", NULL, "success");
 	db_auth_free(a);
 	return(AUTH_OK);
 }
@@ -491,50 +508,45 @@ check_cookie(struct session *s)
 	time_t				check_time;
 
 	check_time = time(NULL);
-	kutil_logx(&s->r, "DEBUG", NULL, "cookiesz %lu",s->r.cookiesz);
+	log_debug(&s->r, "DEBUG", NULL, "cookiesz %lu",s->r.cookiesz);
 	if (s->r.cookiesz == 0)
 		return(AUTH_NONE);
 	for (i = 0; i < s->r.cookiesz; i++) {
-		kutil_logx(&s->r, "DEBUG", NULL, "key[%d] = %s",i, s->r.cookies[i].key);
-		if (strcmp(s->r.cookies[i].key,COOKIENAME) == 0) {
+		log_debug(&s->r, "DEBUG", NULL, "key[%d] = %s",i, s->r.cookies[i].key);
+		if (strcmp(s->r.cookies[i].key,cookie_name) == 0) {
 			found = i;
 			break;
 		}
 	}
-	kutil_logx(&s->r, "DEBUG", NULL, "found %d",found);
+	log_debug(&s->r, "DEBUG", NULL, "found %d",found);
 	if (found == -1)
 		return(AUTH_NONE);
-	kutil_logx(&s->r, "DEBUG", NULL, "cookie %s",s->r.cookies[i].val);
+	log_debug(&s->r, "DEBUG", NULL, "cookie %s",s->r.cookies[i].val);
 	if ((c = db_cookie_get_hash(s->o, s->r.cookies[i].val)) == NULL) {
 		return(AUTH_NONE);
 	}
-	if (c->last <= check_time) { /* expired cookie found (and all other old cookies) */
+	if (c->last <= check_time) { /* expired cookie found. expire (and all other old cookies) */
 		db_cookie_delete_old(s->o, check_time); /* ignore if delete fails */
 		return(AUTH_ERROR);
 	}
-	kutil_logx(&s->r, "DEBUG", NULL, "cookie user %s",c->user);
+	log_debug(&s->r, "DEBUG", NULL, "cookie user %s",c->user);
 	if ((s->user = strdup(c->user)) == NULL) {
-		kutil_logx(&s->r,"DEBUG",NULL,"strdup(user)");
+		log_debug(&s->r,"DEBUG",NULL,"strdup(user)");
 		return(AUTH_ERROR);
 	}
-	kutil_logx(&s->r, "DEBUG", NULL, "cookie value %s",c->cookie);
+	log_debug(&s->r, "DEBUG", NULL, "cookie value %s",c->cookie);
 	if ((s->cookie = strdup(c->cookie)) == NULL) {
-		kutil_logx(&s->r,"DEBUG",NULL,"strdup(cookie)");
+		log_debug(&s->r,"DEBUG",NULL,"strdup(cookie)");
 		return(AUTH_ERROR);
 	}
 	db_cookie_free(c);
 	db_role(s->o,ROLE_admin);
-	if (db_cookie_update_last(s->o, check_time+COOKIETIME, s->cookie) == 0) {
-		kutil_logx(&s->r,"DEBUG",NULL,"cookie_update_last");
+	if (db_cookie_update_last(s->o, check_time+cookie_time, s->cookie) == 0) {
+		log_debug(&s->r,"DEBUG",NULL,"cookie_update_last");
 		/* failed to update the last use... but we got a good cookie... skip */
 	}
-	kutil_logx(&s->r, "DEBUG", NULL, "cookie rc AUTH_OK");
+	log_debug(&s->r, "DEBUG", NULL, "cookie rc AUTH_OK");
 	return(AUTH_OK);
-}
-
-void
-expire_cookies(struct session *s) {
-	return;
 }
 
 int
@@ -545,24 +557,22 @@ check_db(const char *db_file)
 	gid_t				prog_gid;
 	memset(&db_stat, 0, sizeof(struct stat));
 	if (stat(db_file, &db_stat) != 0) {
-//		kutil_logx(&s->r,"DEBUG",NULL,"db stat");
+		log_debug(NULL,"DEBUG",NULL,"db stat");
 		return(1);
 	}
 	if ((db_stat.st_mode & S_IWOTH) == S_IWOTH) {
-//		kutil_logx(&s->r,"DEBUG",NULL,"db is world writable. aborting");
+		log_debug(NULL,"DEBUG",NULL,"db is world writable. aborting");
 		return(1);
 	}
 	prog_uid = geteuid();
 	prog_gid = getegid();
-//	kutil_logx(&s->r,"DEBUG",NULL,"program  uid = %d, gid = %d",prog_uid,prog_gid);
-//	kutil_logx(&s->r,"DEBUG",NULL,"database uid = %d, gid = %d",db_stat.st_uid,db_stat.st_gid);
 	if ( db_stat.st_uid != prog_uid && db_stat.st_gid != prog_gid) {
-//		kutil_logx(&s->r,"DEBUG",NULL,"User/group cannot access db");
+		log_debug(NULL,"DEBUG",NULL,"User/group cannot access db");
 		return(1);
 	}
 	if (((db_stat.st_mode & S_IWUSR|S_IRUSR) != (S_IWUSR|S_IRUSR)) && 
 		((db_stat.st_mode & S_IWGRP|S_IRGRP) != (S_IWGRP|S_IRGRP))) {
-//		kutil_logx(&s->r,"DEBUG",NULL,"User cannot read/write to db");
+		log_debug(NULL,"DEBUG",NULL,"User cannot read/write to db");
 		return(1);
 	}
 	return(0);
@@ -577,21 +587,43 @@ main(void)
 	char *				slug_url;
 	int					slug_found;
 	char *				db_file = DBFILE;
+	char *				tmpstr;
+	long long			tmpnum;
+	const char 			*errstr;
 
 	memset(&sess, 0, sizeof(struct session));
+
+	if  ((tmpstr = getenv("DEBUG")) != NULL) {
+		if (tmpstr[0] == '1') {
+			debug = 1;
+		}
+	}
+	if  ((tmpstr = getenv("DBFILE")) != NULL) {
+		db_file = tmpstr;
+	}
+	if  ((tmpstr = getenv("COOKIE_NAME")) != NULL) {
+		cookie_name = tmpstr;
+	}
+	if ((tmpstr = getenv("COOKIE_TIMEOUT")) != NULL) {
+		tmpnum = strtonum(tmpstr, 1, MAX_COOKIETIME, &errstr);
+		if (errstr == NULL)
+			cookie_time = tmpnum;
+	}
 
 	if (kutil_openlog(NULL) == 0) {
 		fprintf(stderr,"failed to open log");
 		return(EXIT_FAILURE);
 	}
+	log_debug(NULL,"DEBUG",NULL,"COOKIE_NAME: %s",cookie_name);
+	log_debug(NULL,"DEBUG",NULL,"COOKIE_TIMEOUT: %lld",cookie_time);
 
 	if (check_db(db_file) != 0) {
-		kutil_warnx(NULL,NULL,"check_db");
+		log_debug(NULL,"DEBUG",NULL,"check_db");
 		return(EXIT_FAILURE);
 	}
-	kutil_logx(NULL,"DEBUG",sess.user,"dbfile: %s",db_file);
+	log_debug(NULL,"DEBUG",sess.user,"dbfile: %s",db_file);
 	if ((sess.o = db_open(DBFILE)) == NULL) {
-		kutil_warnx(&sess.r,NULL,"db_open");
+		log_debug(&sess.r,"DEBUG",NULL,"db_open");
 		return(EXIT_FAILURE);
 	}
 
@@ -616,16 +648,16 @@ main(void)
 	}
 
 	authorized = check_cookie(&sess);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"authorized: %s(%d)",(authorized?"true":"false"),authorized);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"method: %s",kmethods[sess.r.method]);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"path: %s",sess.r.path);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"fullpath: %s",sess.r.fullpath);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"host: %s",sess.r.host);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"pagename: %s",sess.r.pagename);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"cookiesz: %lu",sess.r.cookiesz);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"fieldsz: %lu",sess.r.fieldsz);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"keysz: %lu",sess.r.keysz);
-	kutil_logx(&sess.r,"DEBUG",sess.user,"page: %lu",sess.r.page);
+	log_debug(&sess.r,"DEBUG",sess.user,"authorized: %s(%d)",(authorized?"true":"false"),authorized);
+	log_debug(&sess.r,"DEBUG",sess.user,"method: %s",kmethods[sess.r.method]);
+	log_debug(&sess.r,"DEBUG",sess.user,"path: %s",sess.r.path);
+	log_debug(&sess.r,"DEBUG",sess.user,"fullpath: %s",sess.r.fullpath);
+	log_debug(&sess.r,"DEBUG",sess.user,"host: %s",sess.r.host);
+	log_debug(&sess.r,"DEBUG",sess.user,"pagename: %s",sess.r.pagename);
+	log_debug(&sess.r,"DEBUG",sess.user,"cookiesz: %lu",sess.r.cookiesz);
+	log_debug(&sess.r,"DEBUG",sess.user,"fieldsz: %lu",sess.r.fieldsz);
+	log_debug(&sess.r,"DEBUG",sess.user,"keysz: %lu",sess.r.keysz);
+	log_debug(&sess.r,"DEBUG",sess.user,"page: %lu",sess.r.page);
 	switch (sess.r.method) {
 		case KMETHOD_GET:
 			switch (sess.r.page) {
@@ -658,12 +690,12 @@ main(void)
 					}
 					break;
 				case PAGE__MAX:
-					kutil_logx(&sess.r,"DEBUG",sess.user,"finding slug");
+					log_debug(&sess.r,"DEBUG",sess.user,"finding slug");
 					slug_found = lookup_slug(&sess, &slug_url);
-					kutil_logx(&sess.r,"DEBUG",sess.user,"slug found: %s",(slug_found?"found":"not found"));
-					kutil_logx(&sess.r,"DEBUG",sess.user,"slug url: %s",slug_url);
+					log_debug(&sess.r,"DEBUG",sess.user,"slug found: %s",(slug_found?"found":"not found"));
+					log_debug(&sess.r,"DEBUG",sess.user,"slug url: %s",slug_url);
 					if (slug_found) {
-						kutil_logx(&sess.r,"DEBUG",sess.user,"sending redirect");
+						log_debug(&sess.r,"DEBUG",sess.user,"sending redirect");
 						send_redirect(&sess,slug_url, KHTTP_301);
 						update_slug_counter(&sess);
 						free(slug_url);
@@ -683,7 +715,7 @@ main(void)
 					} else if (check_auth(&sess) != AUTH_OK) {
 						send_redirect(&sess, "/login", KHTTP_303);
 					} else {
-						kutil_warnx(&sess.r, sess.user, "success auth for %s",sess.user);
+						log_debug(&sess.r, "DEBUG", sess.user, "success auth for %s",sess.user);
 						send_redirect(&sess, "/urls", KHTTP_303);
 					}
 					break;
