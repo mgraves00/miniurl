@@ -15,6 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <sys/queue.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -31,7 +32,6 @@
 
 #define PROGDIR "/miniurl"
 #define DBFILE PROGDIR"/miniurl.db"
-#define LOGFILE "/tmp/outfile.log"
 
 #define COOKIENAME		"url_authz"
 #define COOKIESZ		15
@@ -226,8 +226,8 @@ lookup_slug(struct session *s, char **url)
 		return(0);
 	}
 	if ((*url = strdup(murl->url)) == NULL) {
-		kutil_errx(&s->r,NULL,"strdup(slug)");
-		/* NO RETURN */
+		kutil_warnx(&s->r,NULL,"strdup(slug)");
+		return(0);
 	}
 	db_miniurl_free(murl);
 	return(1);
@@ -470,6 +470,9 @@ check_auth(struct session *s)
 	}
 	s->cookie = c;
 	kutil_logx(&s->r, "DEBUG", s->user, "cookie '%s'",s->cookie);
+	/* change role to admin so we can do admin stuff */
+	kutil_logx(&s->r, "DEBUG", s->user, "ROLE_default = %d, ROLE_admin = %d",(int)ROLE_default,(int)ROLE_admin);
+	db_role(s->o,ROLE_admin);
 	if ((rc = db_cookie_insert(s->o, s->cookie, s->user, time(NULL)+COOKIETIME)) < 0) {
 		kutil_logx(&s->r,"DEBUG",s->user,"db_cookie_insert failed %d", rc);
 		return(AUTH_ERROR);
@@ -520,6 +523,7 @@ check_cookie(struct session *s)
 		return(AUTH_ERROR);
 	}
 	db_cookie_free(c);
+	db_role(s->o,ROLE_admin);
 	if (db_cookie_update_last(s->o, check_time+COOKIETIME, s->cookie) == 0) {
 		kutil_logx(&s->r,"DEBUG",NULL,"cookie_update_last");
 		/* failed to update the last use... but we got a good cookie... skip */
@@ -534,6 +538,37 @@ expire_cookies(struct session *s) {
 }
 
 int
+check_db(const char *db_file)
+{
+	struct stat			db_stat;
+	uid_t				prog_uid;
+	gid_t				prog_gid;
+	memset(&db_stat, 0, sizeof(struct stat));
+	if (stat(db_file, &db_stat) != 0) {
+//		kutil_logx(&s->r,"DEBUG",NULL,"db stat");
+		return(1);
+	}
+	if ((db_stat.st_mode & S_IWOTH) == S_IWOTH) {
+//		kutil_logx(&s->r,"DEBUG",NULL,"db is world writable. aborting");
+		return(1);
+	}
+	prog_uid = geteuid();
+	prog_gid = getegid();
+//	kutil_logx(&s->r,"DEBUG",NULL,"program  uid = %d, gid = %d",prog_uid,prog_gid);
+//	kutil_logx(&s->r,"DEBUG",NULL,"database uid = %d, gid = %d",db_stat.st_uid,db_stat.st_gid);
+	if ( db_stat.st_uid != prog_uid && db_stat.st_gid != prog_gid) {
+//		kutil_logx(&s->r,"DEBUG",NULL,"User/group cannot access db");
+		return(1);
+	}
+	if (((db_stat.st_mode & S_IWUSR|S_IRUSR) != (S_IWUSR|S_IRUSR)) && 
+		((db_stat.st_mode & S_IWGRP|S_IRGRP) != (S_IWGRP|S_IRGRP))) {
+//		kutil_logx(&s->r,"DEBUG",NULL,"User cannot read/write to db");
+		return(1);
+	}
+	return(0);
+}
+
+int
 main(void)
 {
 	enum auth_state		authorized = AUTH_NONE;
@@ -541,6 +576,7 @@ main(void)
 	struct session		sess;
 	char *				slug_url;
 	int					slug_found;
+	char *				db_file = DBFILE;
 
 	memset(&sess, 0, sizeof(struct session));
 
@@ -549,17 +585,27 @@ main(void)
 		return(EXIT_FAILURE);
 	}
 
-	if ((er = khttp_parse(&sess.r, keys, KEY__MAX, pages, PAGE__MAX, PAGE_INDEX)) != KCGI_OK) {
-		fprintf(stderr,"khttp_parse: %s", kcgi_strerror(er));
+	if (check_db(db_file) != 0) {
+		kutil_warnx(NULL,NULL,"check_db");
 		return(EXIT_FAILURE);
 	}
-
-	kutil_logx(&sess.r,"DEBUG",sess.user,"dbfile: %s",DBFILE);
+	kutil_logx(NULL,"DEBUG",sess.user,"dbfile: %s",db_file);
 	if ((sess.o = db_open(DBFILE)) == NULL) {
 		kutil_warnx(&sess.r,NULL,"db_open");
 		return(EXIT_FAILURE);
 	}
 
+	if (pledge("stdio rpath proc", NULL) == -1)
+		return(EXIT_FAILURE);
+	if ((er = khttp_parse(&sess.r, keys, KEY__MAX, pages, PAGE__MAX, PAGE_INDEX)) != KCGI_OK) {
+		fprintf(stderr,"khttp_parse: %s", kcgi_strerror(er));
+		return(EXIT_FAILURE);
+	}
+	if (pledge("stdio rpath", NULL) == -1)
+		return(EXIT_FAILURE);
+
+
+	/* help html forms be more REST-ful */
 	if (sess.r.method == KMETHOD_POST && sess.r.fieldmap[KEY__METHOD] != NULL &&
 			sess.r.fieldmap[KEY__METHOD]->state == KPAIR_VALID) {
 		if (strncasecmp(sess.r.fieldmap[KEY__METHOD]->val,"PUT",sess.r.fieldmap[KEY__METHOD]->valsz) == 0) {
@@ -663,6 +709,7 @@ main(void)
 					} else {
 						send_error(&sess, KHTTP_401);
 					}
+					break;
 				default:
 					send_error(&sess, KHTTP_405);
 					break;
