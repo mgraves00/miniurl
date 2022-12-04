@@ -3,8 +3,8 @@
 COMMENT=		URL minifier
 DISTNAME=		miniurl-0.5
 CATEGORIES=		www
-HOMEPAGE=		http://xxx
-MAINTAINER=		Michael Graves <michael@obtusenet.com>
+HOMEPAGE=		https://github.com/mgraves00/miniurl
+MAINTAINER=		Michael Graves
 # ISC
 PERMIT_PACKAGE=	Yes
 WANTLIB+=		c sqlite3 z
@@ -13,8 +13,9 @@ BUILD_DEPENDS=	www/openradtool \
 				databases/sqlbox
 
 RUN_DEPENDS=	www/openradtool
-MASTER_SITES=
-CONFIGURE_STYLE=	none
+MASTER_SITES=	https://github.com/mgraves00/miniurl
+CONFIGURE_STYLE=	simple
 NO_TEST= 		yes
+SUBST_VARS=		VARBASE
 
 .include <bsd.port.mk>
