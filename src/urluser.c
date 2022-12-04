@@ -14,6 +14,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include "config.h"
+
 #if HAVE_SYS_QUEUE
 #include <sys/queue.h>
 #endif
@@ -32,7 +34,6 @@
 #include <kcgi.h>
 
 #include "miniurl.h"
-#include "config.h"
 
 void usage(void);
 void del_login(struct ort *, char *);
