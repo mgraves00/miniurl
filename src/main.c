@@ -64,6 +64,7 @@ enum var {
 	VAR_USER,
 	VAR_METHOD,
 	VAR_LIST,
+	VAR_LOGINORUSER,
 	VAR__MAX
 };
 
@@ -139,6 +140,7 @@ static const char *const var_names[VAR__MAX] = {
 	"user",
 	"_method",
 	"list",
+	"loginoruser",
 };
 
 struct session {
@@ -311,6 +313,13 @@ value_writer(size_t idx, void *args)
 							u->hash, u->hash, u->url, u->count, u->hash, u->hash);
 				}
 				db_miniurl_freeq(list);
+			}
+			break;
+		case VAR_LOGINORUSER:
+			if (s->user == NULL) {
+				khttp_printf(&s->r,"<div class=\"navbar-item\"> <a href=\"/login\">Login</a> </div>");
+			} else {
+				khttp_printf(&s->r,"<div class=\"navbar-item\">%s</div>",s->user);
 			}
 			break;
 		default: /* skip unknown keys */
