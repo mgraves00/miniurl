@@ -48,12 +48,12 @@ LDADD	+=	${LD_PKG} -lpthread -L/usr/lib -lm -static
 CFLAGS	+=	${CF_PKG} -I${.CURDIR}/obj -g
 
 
-all: miniurl urluser miniurl.db
+all: miniurl urluser
 
 install: all
 	mkdir -p ${DESTDIR}${CGIBIN}
 	${INSTALL_PROGRAM} miniurl ${DESTDIR}${CGIBIN}
-	${INSTALL} -m 775 -o ${WWWUSR} -g ${WWWGRP} ${DESTDIR}${DATADIR}
+	${INSTALL} -d -m 0775 -o ${WWWUSR} -g ${WWWGRP} ${DESTDIR}${DATADIR}
 .for file in ${HTMLS}
 	${INSTALL_DATA} content/${file} ${DESTDIR}${DATADIR}
 .endfor
@@ -68,7 +68,6 @@ install: all
 .for file in ${LICENSES}
 	${INSTALL_DATA} content/${file} ${DESTDIR}${DATADIR}
 .endfor
-	${INSTALL} -m 0660 -o ${WWWUSR} -g ${WWWGRP} miniurl.db ${DESTDIR}${DATADIR}
 	${INSTALL_PROGRAM} urluser ${DESTDIR}${DATADIR}
 	mkdir -p ${DESTDIR}${SHAREDIR}/examples/miniurl
 	${INSTALL_DATA} ${ORTFILE} ${DESTDIR}${SHAREDIR}/examples/miniurl
@@ -108,6 +107,10 @@ uninstall:
 	-rmdir ${DESTDIR}${DATADIR}
 	-rmdir ${DESTDIR}${CGIBIN}
 
+installdb: miniurl.db
+	${INSTALL} -d -m 0775 -o ${WWWUSR} -g ${WWWGRP} ${DESTDIR}${DATADIR}
+	${INSTALL} -m 0660 -o ${WWWUSR} -g ${WWWGRP} miniurl.db ${DESTDIR}${DATADIR}
+
 updatecgi: all
 	mkdir -p ${DESTDIR}${CGIBIN}
 	${INSTALL_PROGRAM} miniurl ${DESTDIR}${CGIBIN}
@@ -137,10 +140,10 @@ miniurl.h: ${ORTFILE}
 miniurl.c: ${ORTFILE} miniurl.h
 	ort-c-source -v -h miniurl.h ${ORTFILE} > ${.TARGET}
 
+${OBJS}: miniurl.h
+
 miniurl.sql: miniurl.ort
 	ort-sql miniurl.ort > ${DESTDIR}${.TARGET}
-
-${OBJS}: miniurl.h
 
 .sql.db:
 	@rm -f ${DESTDIR}${.TARGET}
