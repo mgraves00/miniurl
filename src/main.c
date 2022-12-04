@@ -507,8 +507,9 @@ check_auth(struct session *s)
 	s->cookie = c;
 	log_debug(&s->r, "DEBUG", s->user, "cookie '%s'",s->cookie);
 	/* change role to admin so we can do admin stuff */
-	log_debug(&s->r, "DEBUG", s->user, "ROLE_default = %d, ROLE_admin = %d",(int)ROLE_default,(int)ROLE_admin);
+	log_debug(&s->r, "DEBUG", s->user, "changing role to ROLE_admin");
 	db_role(s->o,ROLE_admin);
+	log_debug(&s->r, "DEBUG", s->user, "role changed");
 	if ((rc = db_cookie_insert(s->o, s->cookie, s->user, time(NULL)+cookie_time)) < 0) {
 		log_debug(&s->r,"DEBUG",s->user,"db_cookie_insert failed %d", rc);
 		return(AUTH_ERROR);
@@ -559,7 +560,9 @@ check_cookie(struct session *s)
 		return(AUTH_ERROR);
 	}
 	db_cookie_free(c);
+	log_debug(&s->r, "DEBUG", s->user, "changing role to ROLE_admin");
 	db_role(s->o,ROLE_admin);
+	log_debug(&s->r, "DEBUG", s->user, "role changed");
 	if (db_cookie_update_last(s->o, check_time+cookie_time, s->cookie) == 0) {
 		log_debug(&s->r,"DEBUG",NULL,"cookie_update_last");
 		/* failed to update the last use... but we got a good cookie... skip */
