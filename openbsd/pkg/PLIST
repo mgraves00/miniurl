@@ -1,0 +1,37 @@
+@comment Customize PLIST so that we could install in /var/www
+@man man/man1/miniurl.1
+@man man/man1/urluser.1
+share/examples/miniurl/
+share/examples/miniurl/LICENSE
+share/examples/miniurl/httpd.conf
+share/examples/miniurl/miniurl.ort
+share/examples/miniurl/miniurl.sql
+@cwd /var/www
+@mode 775
+@owner www
+@group www
+miniurl/
+@mode
+@owner
+@group
+@bin cgi-bin/miniurl
+@bin miniurl/urluser
+miniurl/LICENSE.bulma
+miniurl/LICENSE.fontawesome-free-6.2.1
+miniurl/delete.html
+miniurl/edit.html
+miniurl/index.html
+miniurl/list.html
+miniurl/login.html
+miniurl/static/
+miniurl/static/bulma.css
+miniurl/static/fontawesome.css
+miniurl/webfonts/
+miniurl/webfonts/fa-brands-400.ttf
+miniurl/webfonts/fa-brands-400.woff2
+miniurl/webfonts/fa-regular-400.ttf
+miniurl/webfonts/fa-regular-400.woff2
+miniurl/webfonts/fa-solid-900.ttf
+miniurl/webfonts/fa-solid-900.woff2
+miniurl/webfonts/fa-v4compatibility.ttf
+miniurl/webfonts/fa-v4compatibility.woff2

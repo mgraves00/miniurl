@@ -1,0 +1,13 @@
+To create the database do the following.  doas should be used since file
+must be owned by www.
+
+   doas sqlite3 /var/www/miniurl/miniurl.db < /usr/local/share/examples/miniurl/miniurl.sql
+   doas chown www.www /var/www/miniurl/miniurl.db
+
+To add a admin user
+
+   cd /var/www/miniurl; doas ./urluser -f miniurl.db -a -u <admin_name> -p <admin_password>
+
+See /usr/local/share/examples/miniurl/httpd.conf for example on how to
+configure the httpd(8) daemon.
+
