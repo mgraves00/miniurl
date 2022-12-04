@@ -1,7 +1,19 @@
 /* $Id */
-
-/* copyright here */
-
+/*
+ * Copyright (c) 2022 Michael Graves
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 #include <sys/queue.h>
 #include <sys/types.h>
 #include <err.h>
@@ -16,6 +28,12 @@
 #include <kcgi.h>
 
 #include "miniurl.h"
+#include "config.h"
+
+void usage(void);
+void del_login(struct ort *, char *);
+void list_login(struct ort *);
+void add_login(struct ort *, char *, char *);
 
 extern char *__progname;
 
