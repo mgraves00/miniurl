@@ -8,7 +8,6 @@
 
 DESTDIR=/tmp
 
-SHARDIR=	/usr/local/share/examples
 HTDOCS=		/usr/www/htdocs
 HTURI=		/url
 CGIBIN=		/var/www/cgi-bin
@@ -69,18 +68,26 @@ install: all
 .for file in ${LICENSES}
 	${INSTALL_DATA} content/${file} ${DESTDIR}${DATADIR}
 .endfor
-	${INSTALL_DATA} miniurl.db ${DESTDIR}${DATADIR}
+	${INSTALL} -m 0660 miniurl.db ${DESTDIR}${DATADIR}
 	${INSTALL_PROGRAM} urluser ${DESTDIR}${DATADIR}
-	mkdir -p ${DESTDIR}${SHARDIR}/miniurl
-	${INSTALL_DATA} ${ORTFILE} ${DESTDIR}${SHARDIR}/miniurl
-	${INSTALL_DATA} ../LICENSE ${DESTDIR}${SHARDIR}/miniurl
-	${INSTALL_DATA} httpd.conf ${DESTDIR}${SHARDIR}/miniurl
+	mkdir -p ${DESTDIR}${SHAREDIR}/examples/miniurl
+	${INSTALL_DATA} ${ORTFILE} ${DESTDIR}${SHAREDIR}/examples/miniurl
+	${INSTALL_DATA} ../LICENSE ${DESTDIR}${SHAREDIR}/examples/miniurl
+	${INSTALL_DATA} miniurl.sql ${DESTDIR}${SHAREDIR}/examples/miniurl
+	${INSTALL_DATA} httpd.conf ${DESTDIR}${SHAREDIR}/examples/miniurl
+	mkdir -p ${DESTDIR}${MANDIR}/man1
+	${INSTALL_MAN} urluser.1 ${DESTDIR}${MANDIR}/man1
 	
 uninstall:
-	rm -f ${DESTDIR}${SHARDIR}/miniurl/LICENSE
-	rm -f ${DESTDIR}${SHARDIR}/miniurl/httpd.conf
-	rm -f ${DESTDIR}${SHARDIR}/miniurl/${ORTFILE}
-	-rmdir ${DESTDIR}${SHARDIR}/miniurl
+	rm -f ${DESTDIR}${MANDIR}/man1/urluser.1
+	-rmdir ${DESTDIR}${MANDIR}/man1
+	-rmdir ${DESTDIR}${MANDIR}
+	rm -f ${DESTDIR}${SHAREDIR}/examples/miniurl/LICENSE
+	rm -f ${DESTDIR}${SHAREDIR}/examples/miniurl/httpd.conf
+	rm -f ${DESTDIR}${SHAREDIR}/examples/miniurl/${ORTFILE}
+	rm -f ${DESTDIR}${SHAREDIR}/examples/miniurl/miniurl.sql
+	-rmdir ${DESTDIR}${SHAREDIR}/examples/miniurl
+	-rmdir ${DESTDIR}${SHAREDIR}/examples
 	rm -f ${DESTDIR}${DATADIR}/urluser
 	rm -f ${DESTDIR}${DATADIR}/miniurl.db
 .for file in ${LICENSES}
