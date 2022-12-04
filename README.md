@@ -19,6 +19,7 @@ This program makes use of the following libraries to build and run
 * ./configure
 * make
 * make install
+* make installdb
 
 ## License
 All sources use the ISC license.  See the [license](LICENSE) file for details.
