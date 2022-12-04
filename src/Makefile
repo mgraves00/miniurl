@@ -48,7 +48,7 @@ LDADD	+=	${LD_PKG} -lpthread -L/usr/lib -lm -static
 CFLAGS	+=	${CF_PKG} -I${.CURDIR}/obj -g
 
 
-all: miniurl urluser
+all: miniurl urluser miniurl.sql
 
 install: all
 	mkdir -p ${DESTDIR}${CGIBIN}
@@ -76,8 +76,10 @@ install: all
 	${INSTALL_DATA} httpd.conf ${DESTDIR}${SHAREDIR}/examples/miniurl
 	mkdir -p ${DESTDIR}${MANDIR}/man1
 	${INSTALL_MAN} urluser.1 ${DESTDIR}${MANDIR}/man1
+	${INSTALL_MAN} miniurl.1 ${DESTDIR}${MANDIR}/man1
 	
 uninstall:
+	rm -f ${DESTDIR}${MANDIR}/man1/miniurl.1
 	rm -f ${DESTDIR}${MANDIR}/man1/urluser.1
 	-rmdir ${DESTDIR}${MANDIR}/man1
 	-rmdir ${DESTDIR}${MANDIR}
