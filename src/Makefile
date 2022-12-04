@@ -74,11 +74,12 @@ regress:
 distcheck:
 	# do nothing
 
-miniurl.h: ${ORTFILE}
-	ort-c-header -v ${ORTFILE} > ${.TARGET}
+clean:
+	rm -f miniurl.h miniurl.c miniurl.sql miniurl.db *.o
+	rm -f miniurl urluser
 
-miniurl.c: ${ORTFILE} miniurl.h
-	ort-c-source -v -h miniurl.h ${ORTFILE} > ${.TARGET}
+distclean:
+	rm -f config.log config.h Makeconfigure.configure
 
 miniurl: ${OBJS} main.o
 	${CC} ${LDADD_STATIC} -o ${.TARGET} ${LDFLAGS} ${LDADD} ${OBJS} main.o
@@ -86,19 +87,19 @@ miniurl: ${OBJS} main.o
 urluser: ${OBJS} urluser.o
 	${CC} ${LDADD_STATIC} -o ${.TARGET} ${LDFLAGS} ${LDADD} ${OBJS} urluser.o
 
-${OBJS}: miniurl.h
+miniurl.h: ${ORTFILE}
+	ort-c-header -v ${ORTFILE} > ${.TARGET}
+
+miniurl.c: ${ORTFILE} miniurl.h
+	ort-c-source -v -h miniurl.h ${ORTFILE} > ${.TARGET}
 
 miniurl.sql: miniurl.ort
 	ort-sql miniurl.ort > ${DESTDIR}${.TARGET}
+
+${OBJS}: miniurl.h
 
 .sql.db:
 	@rm -f ${DESTDIR}${.TARGET}
 	sqlite3 ${DESTDIR}${.TARGET} < ${DESTDIR}${.IMPSRC}
 
-clean:
-	rm -f miniurl.h miniurl.c miniurl.sql miniurl.db
-	rm -f *.o
-
-distclean:
-	rm -f config.log config.h Makeconfigure.configure
 
