@@ -53,7 +53,7 @@ all: miniurl urluser miniurl.db
 install: all
 	mkdir -p ${DESTDIR}${CGIBIN}
 	${INSTALL_PROGRAM} miniurl ${DESTDIR}${CGIBIN}
-	mkdir -p ${DESTDIR}${DATADIR}
+	${INSTALL} -m 775 -o ${WWWUSR} -g ${WWWGRP} ${DESTDIR}${DATADIR}
 .for file in ${HTMLS}
 	${INSTALL_DATA} content/${file} ${DESTDIR}${DATADIR}
 .endfor
@@ -108,6 +108,9 @@ uninstall:
 	-rmdir ${DESTDIR}${DATADIR}
 	-rmdir ${DESTDIR}${CGIBIN}
 
+updatecgi: all
+	mkdir -p ${DESTDIR}${CGIBIN}
+	${INSTALL_PROGRAM} miniurl ${DESTDIR}${CGIBIN}
 
 regress:
 	# do nothing
