@@ -14,9 +14,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#if HAVE_SYS_QUEUE
 #include <sys/queue.h>
+#endif
 #include <sys/types.h>
+#if HAVE_ERR
 #include <err.h>
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdint.h>
