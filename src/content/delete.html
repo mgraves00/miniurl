@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="stylesheet" type="text/css" href="/static/bulma.css">
+		<link rel="stylesheet" type="text/css" href="@@path@@/static/bulma.css">
 		<title>Mini URL</title>
 	</head>
 	<body>
@@ -11,7 +11,7 @@
 		</nav>
 		<section class="section">
 			<div class="container">
-				<form class="box" id="delete" action="/hash" method="POST">
+				<form class="box" id="delete" action="@@path@@/hash" method="POST">
 					<input type="hidden" name="_method" value="delete">
 					<div class="field">
 						<label class="label is-sr-only" for="hash">Hash</label>

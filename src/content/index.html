@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="stylesheet" type="text/css" href="/static/bulma.css">
+		<link rel="stylesheet" type="text/css" href="@@path@@/static/bulma.css">
 		<title>Mini URL</title>
 	</head>
 	<body>
@@ -11,7 +11,7 @@
 		</nav>
 		<section class="section">
 			<div class="container">
-				<form class="box" id="lookup" action="/index" method="get">
+				<form class="box" id="lookup" action="@@path@@/index" method="get">
 					<div class="field has-addons">
 						<label class="label is-sr-only" for="hash">HASH</label>
 						<div class="control">
@@ -31,7 +31,7 @@
 			console.log('submitting query');
 			console.log('hash = '+hash.value);
 			if (hash !== undefined && hash.value.length > 0) {
-				form.action = "/"+hash.value
+				form.action = "@@path@@/"+hash.value
 			}
 		};
 		</script>
