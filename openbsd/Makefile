@@ -1,6 +1,6 @@
 # $OpenBSD$
 
-V=		0.5.2
+V=		0.5.3
 COMMENT=	URL minifier
 DISTNAME=	miniurl-v${V}
 PKGNAME=	miniurl-${V}
