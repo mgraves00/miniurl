@@ -68,6 +68,7 @@ enum var {
 	VAR_METHOD,
 	VAR_LIST,
 	VAR_LOGINORUSER,
+	VAR_PATH,
 	VAR__MAX
 };
 
@@ -79,15 +80,7 @@ enum auth_state {
 	AUTH__MAX
 };
 
-struct session;
-/*
-struct session {
-	struct kreq	r;
-	struct ort	*o;
-	char *cookie;
-	char *user;
-};
-*/
+struct session; /* forward declaration */
 
 int kvalid_url(struct kpair *);
 int kvalid_slug(struct kpair *);
@@ -144,6 +137,7 @@ static const char *const var_names[VAR__MAX] = {
 	"_method",
 	"list",
 	"loginoruser",
+	"path",
 };
 
 struct session {
@@ -151,6 +145,7 @@ struct session {
 	struct ort	*o;
 	char *cookie;
 	char *user;
+	char *path;
 };
 
 void
@@ -310,17 +305,19 @@ value_writer(size_t idx, void *args)
 				struct miniurl		*u;
 				list = db_miniurl_list(s->o);
 				TAILQ_FOREACH(u, list, _entries) {
-					khttp_printf(&s->r,"<tr><td><a href=\"/%s\">%s</a></td><td>%s</td><td>%lld</td><td>"
-								"<span class=\"icon\"><a href=\"/hash/%s\"><i class=\"fa-solid fa-pen-to-square\"></i></a></span>"
-								"<span class=\"icon\"><a href=\"/dhash/%s\"><i class=\"fa-solid fa-trash-can\"></i></a></td></tr></span>\n",
-							u->hash, u->hash, u->url, u->count, u->hash, u->hash);
+					khttp_printf(&s->r,"<tr><td><a href=\"%s/%s\">%s</a></td><td>%s</td><td>%lld</td><td>"
+								"<span class=\"icon\"><a href=\"%s/hash/%s\"><i class=\"fa-solid fa-pen-to-square\"></i></a></span>"
+								"<span class=\"icon\"><a href=\"%s/dhash/%s\"><i class=\"fa-solid fa-trash-can\"></i></a></td></tr></span>\n",
+							s->path, u->hash, u->hash, u->url, u->count,
+							s->path, u->hash,
+							s->path, u->hash);
 				}
 				db_miniurl_freeq(list);
 			}
 			break;
 		case VAR_LOGINORUSER:
 			if (s->user == NULL) {
-				khttp_printf(&s->r,"<div class=\"navbar-item\"> <a href=\"/login\">Login</a> </div>");
+				khttp_printf(&s->r,"<div class=\"navbar-item\"> <a href=\"%s/login\">Login</a> </div>",s->path);
 			} else {
 				khttp_printf(&s->r,"<div class=\"navbar-item\">%s</div>",s->user);
 			}
@@ -393,15 +390,23 @@ void
 send_redirect(struct session *s, const char *loc, int code)
 {
 	char	buf[64];
+	int		local_redir = 0;
+	if (strlen(loc) > 0 && loc[0] == '/') {
+		local_redir = 1;
+	}
 	khttp_head(&s->r, kresps[KRESP_STATUS], "%s", khttps[code]);
-	khttp_head(&s->r, kresps[KRESP_LOCATION], "%s", loc);
 	khttp_head(&s->r, kresps[KRESP_EXPIRES], "%s", "0");
 	khttp_head(&s->r, kresps[KRESP_CACHE_CONTROL], "%s", "no-cache, no-store, must-revalidate");
 	khttp_head(&s->r, kresps[KRESP_PRAGMA], "%s", "no-cache");
-	if (s->cookie != NULL) {
-		khttp_epoch2str(time(NULL) + cookie_time, buf, sizeof(buf));
-		khttp_head(&s->r, kresps[KRESP_SET_COOKIE],
-			"%s=%s; path=/; expires=%s", cookie_name, s->cookie, buf);
+	if (local_redir == 1) {
+		khttp_head(&s->r, kresps[KRESP_LOCATION], "%s%s", s->path, loc);
+		if (s->cookie != NULL) {
+			khttp_epoch2str(time(NULL) + cookie_time, buf, sizeof(buf));
+			khttp_head(&s->r, kresps[KRESP_SET_COOKIE],
+				"%s=%s; path=%s; expires=%s", cookie_name, s->cookie, s->path, buf);
+		}
+	} else {
+		khttp_head(&s->r, kresps[KRESP_LOCATION], "%s", loc);
 	}
 	khttp_body(&s->r);
 }
@@ -643,6 +648,19 @@ main(void)
 		if (errstr == NULL)
 			cookie_time = tmpnum;
 	}
+	if (debug) {
+		tmpstr = getenv("PATH_INFO");
+		log_debug(NULL,"DEBUG",NULL,"PATH_INFO: %s",tmpstr);
+	}
+	if ((tmpstr = getenv("URL_PATH")) != NULL) {
+		log_debug(NULL,"DEBUG",NULL,"URL_PATH: %s",tmpstr);
+		if ((sess.path = strdup(tmpstr)) == NULL) {
+			fprintf(stderr,"strdup failed");
+			return(EXIT_FAILURE);
+		}
+	} else {
+		sess.path = NULL;
+	}
 
 	if (kutil_openlog(NULL) == 0) {
 		fprintf(stderr,"failed to open log");
@@ -650,6 +668,7 @@ main(void)
 	}
 	log_debug(NULL,"DEBUG",NULL,"COOKIE_NAME: %s",cookie_name);
 	log_debug(NULL,"DEBUG",NULL,"COOKIE_TIMEOUT: %lld",cookie_time);
+	log_debug(NULL,"DEBUG",NULL,"URL_PATH: %s",sess.path);
 
 	if (check_db(db_file) != 0) {
 		log_debug(NULL,"DEBUG",NULL,"check_db");
@@ -673,7 +692,6 @@ main(void)
 	if (pledge("stdio rpath", NULL) == -1)
 		return(EXIT_FAILURE);
 #endif
-
 
 	/* help html forms be more REST-ful */
 	if (sess.r.method == KMETHOD_POST && sess.r.fieldmap[KEY__METHOD] != NULL &&
@@ -734,7 +752,7 @@ main(void)
 					log_debug(&sess.r,"DEBUG",sess.user,"slug url: %s",slug_url);
 					if (slug_found) {
 						log_debug(&sess.r,"DEBUG",sess.user,"sending redirect");
-						send_redirect(&sess,slug_url, KHTTP_301);
+						send_redirect(&sess,slug_url,KHTTP_301);
 						update_slug_counter(&sess);
 						free(slug_url);
 					} else {
