@@ -305,24 +305,32 @@ value_writer(size_t idx, void *args)
 				struct miniurl		*u;
 				list = db_miniurl_list(s->o);
 				TAILQ_FOREACH(u, list, _entries) {
-					khttp_printf(&s->r,"<tr><td><a href=\"%s/%s\">%s</a></td><td>%s</td><td>%lld</td><td>"
+					er = khttp_printf(&s->r,"<tr><td><a href=\"%s/%s\">%s</a></td><td>%s</td><td>%lld</td><td>"
 								"<span class=\"icon\"><a href=\"%s/hash/%s\"><i class=\"fa-solid fa-pen-to-square\"></i></a></span>"
 								"<span class=\"icon\"><a href=\"%s/dhash/%s\"><i class=\"fa-solid fa-trash-can\"></i></a></td></tr></span>\n",
 							s->path, u->hash, u->hash, u->url, u->count,
 							s->path, u->hash,
 							s->path, u->hash);
+					if (er != KCGI_OK)
+						break;
 				}
 				db_miniurl_freeq(list);
 			}
 			break;
 		case VAR_LOGINORUSER:
 			if (s->user == NULL) {
-				khttp_printf(&s->r,"<div class=\"navbar-item\"> <a href=\"%s/login\">Login</a> </div>",s->path);
+				er = khttp_printf(&s->r,"<div class=\"navbar-item\"> <a href=\"%s/login\">Login</a> </div>",s->path);
 			} else {
-				khttp_printf(&s->r,"<div class=\"navbar-item\">%s</div>",s->user);
+				er = khttp_printf(&s->r,"<div class=\"navbar-item\">%s</div>",s->user);
+			}
+			break;
+		case VAR_PATH:
+			if (s->path != NULL) {
+				er = khttp_printf(&s->r,"%s",s->path);
 			}
 			break;
 		default: /* skip unknown keys */
+			log_debug(&s->r, "DEBUG", s->user, "key %s(%d) not implemented",var_names[idx],idx);
 			er = KCGI_OK;
 			break;
 	}
